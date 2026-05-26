@@ -38,7 +38,7 @@ func run() error {
 	}
 
 	// TODO: Replace with proper constructor once ready
-	teambackDb := database.TeambackDatabase{}
+	teambackDb := database.NewTeambackDatabase(db)
 
 	sessions := auth.NewSessionStore(cfg.SessionSecret)
 
@@ -52,8 +52,8 @@ func run() error {
 		cfg.GoogleClientSecret,
 		cfg.GoogleRedirectURL,
 		sessions,
-		&teambackDb,
-		&teambackDb,
+		teambackDb,
+		teambackDb,
 	)
 
 	mux := http.NewServeMux()
