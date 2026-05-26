@@ -39,13 +39,11 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	// TODO: Replace with proper constructor once ready
 	teambackDb := database.NewTeambackDatabase(db)
 
 	sessions := auth.NewSessionStore(cfg.SessionSecret)
 
-	storage := database.NewDummyStorage()
-	client := core.NewClient(storage)
+	client := core.NewClient(teambackDb)
 
 	h, err := handler.New(client, "templates")
 	if err != nil {
