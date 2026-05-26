@@ -28,13 +28,19 @@ func NewClient(storage Storage) *Client {
 }
 
 // AddUser adds a new user to the system. Only teachers can add users.
-func (c *Client) AddUser(ctx context.Context, user User) error {
+// It initializes the user's ID before persisting.
+func (c *Client) AddUser(ctx context.Context, user User) (User, error) {
 	_, err := c.requireRole(ctx, RoleTeacher)
 	if err != nil {
-		return err
+		return User{}, err
 	}
 
-	return c.storage.WriteUser(user)
+	user.ID = generateID()
+	err = c.storage.WriteUser(user)
+	if err != nil {
+		return User{}, err
+	}
+	return user, nil
 }
 
 // CreateAssignment initializes a new team assignment and persists it.

@@ -46,7 +46,7 @@ func TestClient_AddUser_MissingCaller(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
 
-	err := client.AddUser(context.Background(), student1)
+	_, err := client.AddUser(context.Background(), student1)
 
 	if err == nil || err.Error() != ErrMissingCallerKey {
 		t.Fatal("expected error with message", ErrMissingCallerKey)
@@ -58,7 +58,7 @@ func TestClient_AddUser_Unauthorized(t *testing.T) {
 	client := NewClient(stg)
 	stg.users = append(stg.users, nonTeacher)
 
-	err := client.AddUser(callerCtx(nonTeacher), student1)
+	_, err := client.AddUser(callerCtx(nonTeacher), student1)
 
 	if err == nil || err.Error() != ErrUnauthorizedMsg {
 		t.Fatal("expected error with message", ErrUnauthorizedMsg)
@@ -70,9 +70,26 @@ func TestClient_AddUser_Success(t *testing.T) {
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher)
 
-	_ = client.AddUser(callerCtx(teacher), student1)
+	result, err := client.AddUser(callerCtx(teacher), User{Name: "John Doe", Role: RoleStudent})
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if !slices.Contains(stg.users, student1) {
+	if result.ID == "" {
+		t.Fatal("expected user ID to be initialized")
+	}
+	if result.Name != "John Doe" {
+		t.Fatal("expected user name to be preserved")
+	}
+
+	found := false
+	for _, u := range stg.users {
+		if u.ID == result.ID && u.Name == result.Name {
+			found = true
+			break
+		}
+	}
+	if !found {
 		t.Errorf("expected user to be added to storage, but it was not")
 	}
 }
