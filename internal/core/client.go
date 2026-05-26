@@ -8,9 +8,9 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	CtxCallerKey = iota
-)
+type ctxCallerKeyType struct{}
+
+var CtxCallerKey = ctxCallerKeyType{}
 
 const (
 	ErrMissingCallerKey    = "missing caller key"
@@ -61,6 +61,9 @@ func (c *Client) CreateAssignment(ctx context.Context, title string, team []User
 		Feedback: []Answer{},
 	}
 	err = c.storage.SaveAssignment(assignment)
+	if err != nil {
+		return Assignment{}, err
+	}
 
 	return assignment, nil
 }
@@ -75,7 +78,7 @@ func (c *Client) AddFeedback(ctx context.Context, assignmentId string, answer An
 
 	assignment, err := c.storage.GetAssignment(assignmentId)
 	if err != nil {
-		return Assignment{}, errors.New(ErrAssignmentNotFound)
+		return Assignment{}, err
 	}
 
 	if !slices.ContainsFunc(assignment.Team, func(u User) bool { return u.ID == caller.ID }) {
@@ -132,7 +135,7 @@ func (c *Client) GetAssignment(ctx context.Context, assignmentId string) (Assign
 
 	assignment, err := c.storage.GetAssignment(assignmentId)
 	if err != nil {
-		return Assignment{}, errors.New(ErrAssignmentNotFound)
+		return Assignment{}, err
 	}
 
 	if caller.Role == RoleTeacher {
