@@ -162,6 +162,116 @@ func TestClient_AddFeedback_Unauthorized(t *testing.T) {
 	}
 }
 
+func TestClient_AddFeedback_MissingContribution(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	// Only include contribution for student1, missing student2
+	answer := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Did stuff", Weight: 100},
+		},
+	}
+	_, err := client.AddFeedback(callerCtx(student1), assignment.ID, answer)
+	if err == nil || err.Error() != ErrInvalidContributions {
+		t.Fatal("expected error with message", ErrInvalidContributions)
+	}
+}
+
+func TestClient_AddFeedback_ExtraContribution(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	// Include an extra contribution for student3 who is not in the team
+	answer := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Did stuff", Weight: 50},
+			student2.ID: {Description: "Did stuff", Weight: 25},
+			student3.ID: {Description: "Extra", Weight: 25},
+		},
+	}
+	_, err := client.AddFeedback(callerCtx(student1), assignment.ID, answer)
+	if err == nil || err.Error() != ErrInvalidContributions {
+		t.Fatal("expected error with message", ErrInvalidContributions)
+	}
+}
+
+func TestClient_AddFeedback_EmptyDescription(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	answer := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Did stuff", Weight: 50},
+			student2.ID: {Description: "", Weight: 50},
+		},
+	}
+	_, err := client.AddFeedback(callerCtx(student1), assignment.ID, answer)
+	if err == nil || err.Error() != ErrEmptyDescription {
+		t.Fatal("expected error with message", ErrEmptyDescription)
+	}
+}
+
+func TestClient_AddFeedback_WeightsNotSumTo100(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	answer := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Did stuff", Weight: 60},
+			student2.ID: {Description: "Did stuff", Weight: 60},
+		},
+	}
+	_, err := client.AddFeedback(callerCtx(student1), assignment.ID, answer)
+	if err == nil || err.Error() != ErrInvalidWeights {
+		t.Fatal("expected error with message", ErrInvalidWeights)
+	}
+}
+
+func TestClient_AddFeedback_Success(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	answer := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "I did the backend", Weight: 50},
+			student2.ID: {Description: "She did the frontend", Weight: 50},
+		},
+	}
+	result, err := client.AddFeedback(callerCtx(student1), assignment.ID, answer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(result.Feedback) != 1 {
+		t.Fatal("expected one feedback entry")
+	}
+	if result.Feedback[0].Author.ID != student1.ID {
+		t.Fatal("expected feedback author to be set to caller")
+	}
+
+	// Verify persistence
+	stored := stg.assignments[assignment.ID]
+	if len(stored.Feedback) != 1 {
+		t.Fatal("expected feedback to be persisted")
+	}
+}
+
 type fakeStorage struct {
 	users       []User
 	assignments map[string]Assignment

@@ -13,9 +13,12 @@ const (
 )
 
 const (
-	ErrMissingCallerKey   = "missing caller key"
-	ErrUnauthorizedMsg    = "caller is not authorized to perform this action"
-	ErrAssignmentNotFound = "assignment does not exist"
+	ErrMissingCallerKey    = "missing caller key"
+	ErrUnauthorizedMsg     = "caller is not authorized to perform this action"
+	ErrAssignmentNotFound  = "assignment does not exist"
+	ErrInvalidContributions = "contributions must include exactly one entry per team member"
+	ErrEmptyDescription    = "all contribution descriptions must be non-empty"
+	ErrInvalidWeights      = "contribution weights must sum to 100"
 )
 
 // Client is the entrypoint for all Teamback operations
@@ -79,7 +82,42 @@ func (c *Client) AddFeedback(ctx context.Context, assignmentId string, answer An
 		return Assignment{}, errors.New(ErrUnauthorizedMsg)
 	}
 
-	return Assignment{}, nil
+	if err := validateAnswer(answer, assignment.Team); err != nil {
+		return Assignment{}, err
+	}
+
+	answer.Author = caller
+	assignment.Feedback = append(assignment.Feedback, answer)
+	if err := c.storage.SaveAssignment(assignment); err != nil {
+		return Assignment{}, err
+	}
+
+	return assignment, nil
+}
+
+// validateAnswer checks that the answer has valid contributions for the given team.
+func validateAnswer(answer Answer, team []User) error {
+	if len(answer.MemberContributions) != len(team) {
+		return errors.New(ErrInvalidContributions)
+	}
+	for _, member := range team {
+		if _, ok := answer.MemberContributions[member.ID]; !ok {
+			return errors.New(ErrInvalidContributions)
+		}
+	}
+
+	var totalWeight uint
+	for _, contrib := range answer.MemberContributions {
+		if contrib.Description == "" {
+			return errors.New(ErrEmptyDescription)
+		}
+		totalWeight += uint(contrib.Weight)
+	}
+	if totalWeight != 100 {
+		return errors.New(ErrInvalidWeights)
+	}
+
+	return nil
 }
 
 // requireRole checks if the caller has the specified role and returns the caller's user object if so.
