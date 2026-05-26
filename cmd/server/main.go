@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -38,6 +37,9 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
+	// TODO: Replace with proper constructor once ready
+	teambackDb := database.TeambackDatabase{}
+
 	sessions := auth.NewSessionStore(cfg.SessionSecret)
 
 	h, err := handler.New(db, "templates")
@@ -50,7 +52,8 @@ func run() error {
 		cfg.GoogleClientSecret,
 		cfg.GoogleRedirectURL,
 		sessions,
-		makeLoginCallback(db),
+		&teambackDb,
+		&teambackDb,
 	)
 
 	mux := http.NewServeMux()
@@ -92,30 +95,4 @@ func run() error {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	return srv.Shutdown(shutdownCtx)
-}
-
-// makeLoginCallback returns the function called after successful Google auth.
-// It links the Google account to an existing user by email.
-func makeLoginCallback(db *sql.DB) func(ctx context.Context, email, name, googleSub string) (string, error) {
-	return func(ctx context.Context, email, name, googleSub string) (string, error) {
-		var userID string
-		err := db.QueryRowContext(ctx, "SELECT id FROM users WHERE email = ?", email).Scan(&userID)
-		if err == sql.ErrNoRows {
-			return "", fmt.Errorf("user not registered: %s", email)
-		}
-		if err != nil {
-			return "", fmt.Errorf("querying user: %w", err)
-		}
-
-		// Link Google sub if not already linked
-		_, err = db.ExecContext(ctx,
-			"UPDATE users SET google_sub = ? WHERE id = ? AND google_sub IS NULL",
-			googleSub, userID,
-		)
-		if err != nil {
-			return "", fmt.Errorf("linking google account: %w", err)
-		}
-
-		return userID, nil
-	}
 }

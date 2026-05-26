@@ -13,13 +13,13 @@ type ctxCallerKeyType struct{}
 var CtxCallerKey = ctxCallerKeyType{}
 
 const (
-	ErrMissingCallerKey    = "missing caller key"
-	ErrUnauthorizedMsg     = "caller is not authorized to perform this action"
-	ErrAssignmentNotFound  = "assignment does not exist"
+	ErrMissingCallerKey     = "missing caller key"
+	ErrUnauthorizedMsg      = "caller is not authorized to perform this action"
+	ErrAssignmentNotFound   = "assignment does not exist"
 	ErrInvalidContributions = "contributions must include exactly one entry per team member"
-	ErrEmptyDescription    = "all contribution descriptions must be non-empty"
-	ErrInvalidWeights      = "contribution weights must sum to 100"
-	ErrUserNotFound        = "user not found"
+	ErrEmptyDescription     = "all contribution descriptions must be non-empty"
+	ErrInvalidWeights       = "contribution weights must sum to 100"
+	ErrUserNotFound         = "user not found"
 )
 
 // Client is the entrypoint for all Teamback operations
