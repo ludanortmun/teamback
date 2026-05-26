@@ -199,7 +199,9 @@ func TestSaveAssignmentIdempotent(t *testing.T) {
 	tdb := setupTestDB(t)
 
 	alice := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
-	tdb.WriteUser(alice)
+	if err := tdb.WriteUser(alice); err != nil {
+		t.Fatalf("WriteUser: %v", err)
+	}
 
 	assignment := core.Assignment{
 		ID:    "assign-1",
@@ -230,10 +232,16 @@ func TestListAssignments(t *testing.T) {
 	tdb := setupTestDB(t)
 
 	alice := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
-	tdb.WriteUser(alice)
+	if err := tdb.WriteUser(alice); err != nil {
+		t.Fatalf("WriteUser: %v", err)
+	}
 
-	tdb.SaveAssignment(core.Assignment{ID: "a1", Title: "First", Team: []core.User{alice}})
-	tdb.SaveAssignment(core.Assignment{ID: "a2", Title: "Second", Team: []core.User{alice}})
+	if err := tdb.SaveAssignment(core.Assignment{ID: "a1", Title: "First", Team: []core.User{alice}}); err != nil {
+		t.Fatalf("SaveAssignment a1: %v", err)
+	}
+	if err := tdb.SaveAssignment(core.Assignment{ID: "a2", Title: "Second", Team: []core.User{alice}}); err != nil {
+		t.Fatalf("SaveAssignment a2: %v", err)
+	}
 
 	assignments, err := tdb.ListAssignments()
 	if err != nil {
@@ -248,7 +256,9 @@ func TestLinkIfNecessary(t *testing.T) {
 	tdb := setupTestDB(t)
 
 	user := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
-	tdb.WriteUser(user)
+	if err := tdb.WriteUser(user); err != nil {
+		t.Fatalf("WriteUser: %v", err)
+	}
 
 	extUser := auth.ExternalUserInfo{Sub: "google-123", Email: "alice@gmail.com", Name: "Alice G"}
 

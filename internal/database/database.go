@@ -171,6 +171,7 @@ func (t *TeambackDatabase) GetAssignment(assignmentId string) (core.Assignment, 
 }
 
 func (t *TeambackDatabase) ListAssignments() ([]core.Assignment, error) {
+	// TODO: Replace per-assignment team/feedback loads with batched JOIN-based loading to avoid N+1 queries.
 	rows, err := t.db.Query(`SELECT id, title FROM assignments`)
 	if err != nil {
 		return nil, fmt.Errorf("listing assignments: %w", err)
@@ -245,6 +246,7 @@ func (t *TeambackDatabase) loadAssignmentTeam(assignmentID string) ([]core.User,
 }
 
 func (t *TeambackDatabase) loadAssignmentFeedback(assignmentID string) ([]core.Answer, error) {
+	// TODO: Replace per-answer contribution lookups with a single JOIN/bulk query.
 	rows, err := t.db.Query(
 		`SELECT a.id, a.author_id, u.name, u.email, u.role
 		 FROM answers a
