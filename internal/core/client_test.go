@@ -43,7 +43,7 @@ func callerCtx(user User) context.Context {
 }
 
 func TestClient_AddUser_MissingCaller(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 
 	_, err := client.AddUser(context.Background(), student1)
@@ -54,7 +54,7 @@ func TestClient_AddUser_MissingCaller(t *testing.T) {
 }
 
 func TestClient_AddUser_Unauthorized(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, nonTeacher)
 
@@ -66,7 +66,7 @@ func TestClient_AddUser_Unauthorized(t *testing.T) {
 }
 
 func TestClient_AddUser_Success(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher)
 
@@ -95,7 +95,7 @@ func TestClient_AddUser_Success(t *testing.T) {
 }
 
 func TestClient_CreateAssignment_MissingCaller(t *testing.T) {
-	client := NewClient(newFakeStorge())
+	client := NewClient(newFakeStorage())
 
 	_, err := client.CreateAssignment(context.Background(), "Some assignment", []User{})
 
@@ -105,7 +105,7 @@ func TestClient_CreateAssignment_MissingCaller(t *testing.T) {
 }
 
 func TestClient_CreateAssignment_Unauthorized(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, nonTeacher)
 
@@ -117,7 +117,7 @@ func TestClient_CreateAssignment_Unauthorized(t *testing.T) {
 }
 
 func TestClient_CreateAssignment_Success(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -138,20 +138,20 @@ func TestClient_CreateAssignment_Success(t *testing.T) {
 }
 
 func TestClient_AddFeedback_AssignmentNotFound(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, student1)
 
 	_, err := client.AddFeedback(callerCtx(student1), "invalid id", Answer{})
-	if err == nil || err.Error() != ErrAssignmentNotFound {
-		t.Fatal("expected error with message", ErrAssignmentNotFound)
+	if err == nil || err.Error() != "assignment not found" {
+		t.Fatal("expected error with message", "assignment not found")
 	}
 }
 
 func TestClient_AddFeedback_Unauthorized(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
-	stg.users = append(stg.users, teacher, student1, student2)
+	stg.users = append(stg.users, teacher, student1, student2, student3)
 
 	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Some assignment", []User{student1, student2})
 
@@ -162,8 +162,21 @@ func TestClient_AddFeedback_Unauthorized(t *testing.T) {
 	}
 }
 
+func TestClient_AddFeedback_MissingUser(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Some assignment", []User{student1, student2})
+
+	_, err := client.AddFeedback(callerCtx(student3), assignment.ID, Answer{})
+	if err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected error with message", ErrUnauthorizedMsg)
+	}
+}
+
 func TestClient_AddFeedback_MissingContribution(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -182,7 +195,7 @@ func TestClient_AddFeedback_MissingContribution(t *testing.T) {
 }
 
 func TestClient_AddFeedback_ExtraContribution(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -203,7 +216,7 @@ func TestClient_AddFeedback_ExtraContribution(t *testing.T) {
 }
 
 func TestClient_AddFeedback_EmptyDescription(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -222,7 +235,7 @@ func TestClient_AddFeedback_EmptyDescription(t *testing.T) {
 }
 
 func TestClient_AddFeedback_WeightsNotSumTo100(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -241,7 +254,7 @@ func TestClient_AddFeedback_WeightsNotSumTo100(t *testing.T) {
 }
 
 func TestClient_AddFeedback_Success(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -273,18 +286,18 @@ func TestClient_AddFeedback_Success(t *testing.T) {
 }
 
 func TestClient_GetAssignment_NotFound(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher)
 
 	_, err := client.GetAssignment(callerCtx(teacher), "nonexistent")
-	if err == nil || err.Error() != ErrAssignmentNotFound {
-		t.Fatal("expected error with message", ErrAssignmentNotFound)
+	if err == nil || err.Error() != "assignment not found" {
+		t.Fatal("expected error with message", "assignment not found")
 	}
 }
 
 func TestClient_GetAssignment_TeacherSeesAll(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -315,7 +328,7 @@ func TestClient_GetAssignment_TeacherSeesAll(t *testing.T) {
 }
 
 func TestClient_GetAssignment_StudentSeesOwnOnly(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2)
 
@@ -349,7 +362,7 @@ func TestClient_GetAssignment_StudentSeesOwnOnly(t *testing.T) {
 }
 
 func TestClient_GetAssignment_UnauthorizedStudent(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2, student3)
 
@@ -362,7 +375,7 @@ func TestClient_GetAssignment_UnauthorizedStudent(t *testing.T) {
 }
 
 func TestClient_GetAssignments_MissingCaller(t *testing.T) {
-	client := NewClient(newFakeStorge())
+	client := NewClient(newFakeStorage())
 
 	_, err := client.GetAssignments(context.Background())
 	if err == nil || err.Error() != ErrMissingCallerKey {
@@ -371,7 +384,7 @@ func TestClient_GetAssignments_MissingCaller(t *testing.T) {
 }
 
 func TestClient_GetAssignments_TeacherSeesAll(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2, student3)
 
@@ -388,7 +401,7 @@ func TestClient_GetAssignments_TeacherSeesAll(t *testing.T) {
 }
 
 func TestClient_GetAssignments_StudentSeesOwnOnly(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2, student3)
 
@@ -423,7 +436,7 @@ func TestClient_GetAssignments_StudentSeesOwnOnly(t *testing.T) {
 }
 
 func TestClient_GetAssignments_StudentNoAssignments(t *testing.T) {
-	stg := newFakeStorge()
+	stg := newFakeStorage()
 	client := NewClient(stg)
 	stg.users = append(stg.users, teacher, student1, student2, student3)
 
@@ -443,7 +456,7 @@ type fakeStorage struct {
 	assignments map[string]Assignment
 }
 
-func newFakeStorge() *fakeStorage {
+func newFakeStorage() *fakeStorage {
 	return &fakeStorage{
 		users:       make([]User, 0),
 		assignments: make(map[string]Assignment),

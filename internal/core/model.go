@@ -13,8 +13,8 @@ type User struct {
 	Role Role
 }
 
-// Assignment represents an instance of a Team's assignment.
-// Each assignment has a title and description, and maps to a single feedback form.
+// Assignment represents a team assignment.
+// It includes the team members, assignment title, and submitted feedback answers.
 type Assignment struct {
 	ID       string
 	Team     []User
