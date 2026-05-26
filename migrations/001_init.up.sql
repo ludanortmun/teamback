@@ -35,8 +35,8 @@ CREATE TABLE answers (
 
 CREATE TABLE contributions (
     answer_id TEXT NOT NULL REFERENCES answers(id) ON DELETE CASCADE,
-    member_id TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    weight SMALLINT NOT NULL,
+    member_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    description TEXT NOT NULL CHECK (btrim(description) <> ''),
+    weight SMALLINT NOT NULL CHECK (weight BETWEEN 0 AND 100),
     PRIMARY KEY (answer_id, member_id)
 );

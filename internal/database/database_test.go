@@ -150,8 +150,12 @@ func TestSaveAndGetAssignment(t *testing.T) {
 	// Create team members first
 	alice := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
 	bob := core.User{ID: "user-2", Name: "Bob", Email: "bob@test.com", Role: core.RoleStudent}
-	tdb.WriteUser(alice)
-	tdb.WriteUser(bob)
+	if err := tdb.WriteUser(alice); err != nil {
+		t.Fatalf("WriteUser alice: %v", err)
+	}
+	if err := tdb.WriteUser(bob); err != nil {
+		t.Fatalf("WriteUser bob: %v", err)
+	}
 
 	assignment := core.Assignment{
 		ID:    "assign-1",
@@ -261,7 +265,9 @@ func TestLinkIfNecessaryIdempotent(t *testing.T) {
 	tdb := setupTestDB(t)
 
 	user := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
-	tdb.WriteUser(user)
+	if err := tdb.WriteUser(user); err != nil {
+		t.Fatalf("WriteUser: %v", err)
+	}
 
 	extUser := auth.ExternalUserInfo{Sub: "google-123", Email: "alice@gmail.com", Name: "Alice G"}
 
