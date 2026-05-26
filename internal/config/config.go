@@ -22,7 +22,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
-		DatabaseURL:        getEnv("DATABASE_URL", "teamback.db"),
+		DatabaseURL:        getEnv("DATABASE_URL", "postgres://teamback:teamback@localhost:5432/teamback?sslmode=disable"),
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/callback"),
