@@ -10,7 +10,7 @@ A simple web application for gathering feedback on group school projects. Teache
 
 ## Prerequisites
 
-- Go 1.22+
+- Go 1.26.2
 - A Google OAuth 2.0 client (create one at [Google Cloud Console](https://console.cloud.google.com/apis/credentials))
 - GCC (required by go-sqlite3 CGo dependency)
 
