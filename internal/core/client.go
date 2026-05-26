@@ -120,16 +120,62 @@ func validateAnswer(answer Answer, team []User) error {
 	return nil
 }
 
+// GetAssignment retrieves an assignment with role-based visibility:
+// - Teachers can see all answers
+// - Students in the team can see only their own answer
+// - Any other user is unauthorized
+func (c *Client) GetAssignment(ctx context.Context, assignmentId string) (Assignment, error) {
+	caller, err := c.requireAuth(ctx)
+	if err != nil {
+		return Assignment{}, err
+	}
+
+	assignment, err := c.storage.GetAssignment(assignmentId)
+	if err != nil {
+		return Assignment{}, errors.New(ErrAssignmentNotFound)
+	}
+
+	if caller.Role == RoleTeacher {
+		return assignment, nil
+	}
+
+	if !slices.ContainsFunc(assignment.Team, func(u User) bool { return u.ID == caller.ID }) {
+		return Assignment{}, errors.New(ErrUnauthorizedMsg)
+	}
+
+	// Filter feedback to only the caller's own answer
+	filtered := []Answer{}
+	for _, a := range assignment.Feedback {
+		if a.Author.ID == caller.ID {
+			filtered = append(filtered, a)
+		}
+	}
+	assignment.Feedback = filtered
+	return assignment, nil
+}
+
 // requireRole checks if the caller has the specified role and returns the caller's user object if so.
 // Otherwise, it returns an error.
 func (c *Client) requireRole(ctx context.Context, role Role) (User, error) {
+	caller, err := c.requireAuth(ctx)
+	if err != nil {
+		return User{}, err
+	}
+	if caller.Role != role {
+		return User{}, errors.New(ErrUnauthorizedMsg)
+	}
+	return caller, nil
+}
+
+// requireAuth extracts and returns the authenticated caller from the context.
+func (c *Client) requireAuth(ctx context.Context) (User, error) {
 	callerId, ok := ctx.Value(CtxCallerKey).(string)
 	if !ok {
 		return User{}, errors.New(ErrMissingCallerKey)
 	}
 
 	caller, err := c.storage.ReadUser(callerId)
-	if err != nil || caller.Role != role {
+	if err != nil {
 		return User{}, errors.New(ErrUnauthorizedMsg)
 	}
 	return caller, nil

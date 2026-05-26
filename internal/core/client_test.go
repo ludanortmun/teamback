@@ -272,6 +272,95 @@ func TestClient_AddFeedback_Success(t *testing.T) {
 	}
 }
 
+func TestClient_GetAssignment_NotFound(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher)
+
+	_, err := client.GetAssignment(callerCtx(teacher), "nonexistent")
+	if err == nil || err.Error() != ErrAssignmentNotFound {
+		t.Fatal("expected error with message", ErrAssignmentNotFound)
+	}
+}
+
+func TestClient_GetAssignment_TeacherSeesAll(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	answer1 := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "My work", Weight: 50},
+			student2.ID: {Description: "Their work", Weight: 50},
+		},
+	}
+	answer2 := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Their work", Weight: 40},
+			student2.ID: {Description: "My work", Weight: 60},
+		},
+	}
+	client.AddFeedback(callerCtx(student1), assignment.ID, answer1)
+	client.AddFeedback(callerCtx(student2), assignment.ID, answer2)
+
+	result, err := client.GetAssignment(callerCtx(teacher), assignment.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Feedback) != 2 {
+		t.Fatal("expected teacher to see all 2 answers, got", len(result.Feedback))
+	}
+}
+
+func TestClient_GetAssignment_StudentSeesOwnOnly(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	answer1 := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "My work", Weight: 50},
+			student2.ID: {Description: "Their work", Weight: 50},
+		},
+	}
+	answer2 := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Their work", Weight: 40},
+			student2.ID: {Description: "My work", Weight: 60},
+		},
+	}
+	client.AddFeedback(callerCtx(student1), assignment.ID, answer1)
+	client.AddFeedback(callerCtx(student2), assignment.ID, answer2)
+
+	result, err := client.GetAssignment(callerCtx(student1), assignment.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Feedback) != 1 {
+		t.Fatal("expected student to see only their own answer, got", len(result.Feedback))
+	}
+	if result.Feedback[0].Author.ID != student1.ID {
+		t.Fatal("expected the visible answer to be authored by the caller")
+	}
+}
+
+func TestClient_GetAssignment_UnauthorizedStudent(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2, student3)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	_, err := client.GetAssignment(callerCtx(student3), assignment.ID)
+	if err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected error with message", ErrUnauthorizedMsg)
+	}
+}
+
 type fakeStorage struct {
 	users       []User
 	assignments map[string]Assignment
