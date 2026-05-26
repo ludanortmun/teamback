@@ -143,8 +143,8 @@ func TestClient_AddFeedback_AssignmentNotFound(t *testing.T) {
 	stg.users = append(stg.users, student1)
 
 	_, err := client.AddFeedback(callerCtx(student1), "invalid id", Answer{})
-	if err == nil || err.Error() != "assignment not found" {
-		t.Fatal("expected error with message", "assignment not found")
+	if err == nil || err.Error() != ErrAssignmentNotFound {
+		t.Fatal("expected error with message", ErrAssignmentNotFound)
 	}
 }
 
@@ -291,8 +291,8 @@ func TestClient_GetAssignment_NotFound(t *testing.T) {
 	stg.users = append(stg.users, teacher)
 
 	_, err := client.GetAssignment(callerCtx(teacher), "nonexistent")
-	if err == nil || err.Error() != "assignment not found" {
-		t.Fatal("expected error with message", "assignment not found")
+	if err == nil || err.Error() != ErrAssignmentNotFound {
+		t.Fatal("expected error with message", ErrAssignmentNotFound)
 	}
 }
 
@@ -485,7 +485,7 @@ func (f *fakeStorage) SaveAssignment(assignment Assignment) error {
 func (f *fakeStorage) GetAssignment(assignmentId string) (Assignment, error) {
 	assignment, ok := f.assignments[assignmentId]
 	if !ok {
-		return Assignment{}, errors.New("assignment not found")
+		return Assignment{}, errors.New(ErrAssignmentNotFound)
 	}
 	return assignment, nil
 }
