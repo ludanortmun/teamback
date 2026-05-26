@@ -1,0 +1,35 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<h1>Assignments</h1>
+
+<a href="/assignments/new" class="btn">New Assignment</a>
+<a href="/users/new" class="btn">Add Student</a>
+
+{{if .Assignments}}
+<table>
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Team Size</th>
+            <th>Feedback Count</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range .Assignments}}
+        <tr>
+            <td>{{.Title}}</td>
+            <td>{{len .Team}}</td>
+            <td>{{len .Feedback}}</td>
+            <td>
+                <a href="/assignments/{{.ID}}">View</a>
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{else}}
+<p>No assignments yet.</p>
+{{end}}
+{{end}}

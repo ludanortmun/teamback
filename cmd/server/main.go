@@ -12,8 +12,10 @@ import (
 
 	"github.com/ludanortmun/teamback/internal/auth"
 	"github.com/ludanortmun/teamback/internal/config"
+	"github.com/ludanortmun/teamback/internal/core"
 	"github.com/ludanortmun/teamback/internal/database"
 	"github.com/ludanortmun/teamback/internal/handler"
+	"github.com/ludanortmun/teamback/internal/middleware"
 )
 
 func main() {
@@ -40,7 +42,10 @@ func run() error {
 
 	sessions := auth.NewSessionStore(cfg.SessionSecret)
 
-	h, err := handler.New(db, "templates")
+	storage := database.NewDummyStorage()
+	client := core.NewClient(storage)
+
+	h, err := handler.New(client, "templates")
 	if err != nil {
 		return fmt.Errorf("initializing handlers: %w", err)
 	}
@@ -66,6 +71,18 @@ func run() error {
 	mux.HandleFunc("GET /auth/login", oidc.HandleLogin)
 	mux.HandleFunc("GET /auth/callback", oidc.HandleCallback)
 	mux.HandleFunc("GET /auth/logout", oidc.HandleLogout)
+
+	// Protected routes (require authentication)
+	authMw := middleware.RequireAuth(sessions)
+
+	mux.Handle("GET /assignments", authMw(http.HandlerFunc(h.HandleListAssignments)))
+	mux.Handle("GET /assignments/new", authMw(http.HandlerFunc(h.HandleNewAssignment)))
+	mux.Handle("POST /assignments", authMw(http.HandlerFunc(h.HandleCreateAssignment)))
+	mux.Handle("GET /assignments/{id}", authMw(http.HandlerFunc(h.HandleViewAssignment)))
+	mux.Handle("GET /assignments/{id}/feedback", authMw(http.HandlerFunc(h.HandleNewFeedback)))
+	mux.Handle("POST /assignments/{id}/feedback", authMw(http.HandlerFunc(h.HandleCreateFeedback)))
+	mux.Handle("GET /users/new", authMw(http.HandlerFunc(h.HandleNewUser)))
+	mux.Handle("POST /users", authMw(http.HandlerFunc(h.HandleCreateUser)))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

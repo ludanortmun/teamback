@@ -1,0 +1,33 @@
+{{template "layout" .}}
+
+{{define "content"}}
+{{with .Assignment}}
+<h1>Submit Feedback: {{.Title}}</h1>
+
+{{if $.Errors}}
+<div class="errors">
+    {{range $.Errors}}<p class="error">{{.}}</p>{{end}}
+</div>
+{{end}}
+
+<form method="POST" action="/assignments/{{.ID}}/feedback">
+    <p>Rate each team member's contribution. Weights must sum to 100.</p>
+
+    {{range .Team}}
+    <fieldset>
+        <legend>{{.Name}} ({{.Email}})</legend>
+        <div class="form-group">
+            <label for="description_{{.ID}}">Description</label>
+            <textarea id="description_{{.ID}}" name="description_{{.ID}}" rows="2" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="weight_{{.ID}}">Weight (%)</label>
+            <input type="number" id="weight_{{.ID}}" name="weight_{{.ID}}" min="0" max="100" required>
+        </div>
+    </fieldset>
+    {{end}}
+
+    <button type="submit" class="btn">Submit Feedback</button>
+</form>
+{{end}}
+{{end}}
