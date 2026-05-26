@@ -154,6 +154,42 @@ func (c *Client) GetAssignment(ctx context.Context, assignmentId string) (Assign
 	return assignment, nil
 }
 
+// GetAssignments lists all assignments visible to the caller.
+// Teachers see all assignments with full feedback.
+// Students see only assignments where they are a team member, with feedback
+// filtered to only their own answer.
+func (c *Client) GetAssignments(ctx context.Context) ([]Assignment, error) {
+	caller, err := c.requireAuth(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	all, err := c.storage.ListAssignments()
+	if err != nil {
+		return nil, err
+	}
+
+	if caller.Role == RoleTeacher {
+		return all, nil
+	}
+
+	var visible []Assignment
+	for _, assignment := range all {
+		if !slices.ContainsFunc(assignment.Team, func(u User) bool { return u.ID == caller.ID }) {
+			continue
+		}
+		filtered := []Answer{}
+		for _, a := range assignment.Feedback {
+			if a.Author.ID == caller.ID {
+				filtered = append(filtered, a)
+			}
+		}
+		assignment.Feedback = filtered
+		visible = append(visible, assignment)
+	}
+	return visible, nil
+}
+
 // requireRole checks if the caller has the specified role and returns the caller's user object if so.
 // Otherwise, it returns an error.
 func (c *Client) requireRole(ctx context.Context, role Role) (User, error) {

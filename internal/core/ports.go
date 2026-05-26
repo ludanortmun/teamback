@@ -5,4 +5,5 @@ type Storage interface {
 	ReadUser(id string) (User, error)
 	SaveAssignment(assignment Assignment) error
 	GetAssignment(assignmentId string) (Assignment, error)
+	ListAssignments() ([]Assignment, error)
 }
