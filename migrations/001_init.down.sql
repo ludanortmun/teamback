@@ -1,1 +1,6 @@
+DROP TABLE IF EXISTS contributions;
+DROP TABLE IF EXISTS answers;
+DROP TABLE IF EXISTS assignment_members;
+DROP TABLE IF EXISTS assignments;
+DROP TABLE IF EXISTS identities;
 DROP TABLE IF EXISTS users;

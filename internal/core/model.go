@@ -7,6 +7,7 @@ const (
 	RoleTeacher
 )
 
+// User represents the profile information for a user of the system.
 type User struct {
 	ID    string
 	Name  string
@@ -31,6 +32,8 @@ type Answer struct {
 	MemberContributions map[string]Contribution
 }
 
+// Contribution contains a plain-text description of a student's contribution to the Assignment,
+// as well as a contribution weight, representing the percentage of work done by said student.
 type Contribution struct {
 	Description string
 	Weight      uint8
