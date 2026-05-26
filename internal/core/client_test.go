@@ -7,18 +7,46 @@ import (
 	"testing"
 )
 
-func TestClient_AddUser_MissingCaller(t *testing.T) {
-	stg := newFakeStorge()
-	client := NewClient(stg)
-	ctx := context.Background()
-
-	newUser := User{
+// Shared test users
+var (
+	teacher = User{
+		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
+		Name: "Tom John",
+		Role: RoleTeacher,
+	}
+	student1 = User{
 		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
 		Name: "John Doe",
 		Role: RoleStudent,
 	}
+	student2 = User{
+		ID:   "48483e93-4c63-4f96-875b-abdada724bba",
+		Name: "Jane Doe",
+		Role: RoleStudent,
+	}
+	student3 = User{
+		ID:   "fb402398-a4c0-4ba9-92ac-99ca2708adbe",
+		Name: "Jack Doe",
+		Role: RoleStudent,
+	}
+	// nonTeacher is a student used to test unauthorized teacher-only actions.
+	nonTeacher = User{
+		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
+		Name: "Tom John",
+		Role: RoleStudent,
+	}
+)
 
-	err := client.AddUser(ctx, newUser)
+// callerCtx returns a context carrying the given user's ID as the caller key.
+func callerCtx(user User) context.Context {
+	return context.WithValue(context.Background(), CtxCallerKey, user.ID)
+}
+
+func TestClient_AddUser_MissingCaller(t *testing.T) {
+	stg := newFakeStorge()
+	client := NewClient(stg)
+
+	err := client.AddUser(context.Background(), student1)
 
 	if err == nil || err.Error() != ErrMissingCallerKey {
 		t.Fatal("expected error with message", ErrMissingCallerKey)
@@ -28,23 +56,9 @@ func TestClient_AddUser_MissingCaller(t *testing.T) {
 func TestClient_AddUser_Unauthorized(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
+	stg.users = append(stg.users, nonTeacher)
 
-	teacherUser := User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleStudent,
-	}
-	stg.users = append(stg.users, teacherUser)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, CtxCallerKey, teacherUser.ID)
-
-	newUser := User{
-		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
-		Name: "John Doe",
-		Role: RoleStudent,
-	}
-
-	err := client.AddUser(ctx, newUser)
+	err := client.AddUser(callerCtx(nonTeacher), student1)
 
 	if err == nil || err.Error() != ErrUnauthorizedMsg {
 		t.Fatal("expected error with message", ErrUnauthorizedMsg)
@@ -54,35 +68,19 @@ func TestClient_AddUser_Unauthorized(t *testing.T) {
 func TestClient_AddUser_Success(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
+	stg.users = append(stg.users, teacher)
 
-	teacherUser := User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleTeacher,
-	}
-	stg.users = append(stg.users, teacherUser)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, CtxCallerKey, teacherUser.ID)
+	_ = client.AddUser(callerCtx(teacher), student1)
 
-	newUser := User{
-		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
-		Name: "John Doe",
-		Role: RoleStudent,
-	}
-
-	_ = client.AddUser(ctx, newUser)
-
-	if !slices.Contains(stg.users, newUser) {
+	if !slices.Contains(stg.users, student1) {
 		t.Errorf("expected user to be added to storage, but it was not")
 	}
 }
 
 func TestClient_CreateAssignment_MissingCaller(t *testing.T) {
-	stg := newFakeStorge()
-	client := NewClient(stg)
-	ctx := context.Background()
+	client := NewClient(newFakeStorge())
 
-	_, err := client.CreateAssignment(ctx, "Some assignment", []User{})
+	_, err := client.CreateAssignment(context.Background(), "Some assignment", []User{})
 
 	if err == nil || err.Error() != ErrMissingCallerKey {
 		t.Fatal("expected error with message", ErrMissingCallerKey)
@@ -92,17 +90,9 @@ func TestClient_CreateAssignment_MissingCaller(t *testing.T) {
 func TestClient_CreateAssignment_Unauthorized(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
+	stg.users = append(stg.users, nonTeacher)
 
-	studentCaller := User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleStudent,
-	}
-	stg.users = append(stg.users, studentCaller)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, CtxCallerKey, studentCaller.ID)
-
-	_, err := client.CreateAssignment(ctx, "Some assignment", []User{})
+	_, err := client.CreateAssignment(callerCtx(nonTeacher), "Some assignment", []User{})
 
 	if err == nil || err.Error() != ErrUnauthorizedMsg {
 		t.Fatal("expected error with message", ErrUnauthorizedMsg)
@@ -112,29 +102,9 @@ func TestClient_CreateAssignment_Unauthorized(t *testing.T) {
 func TestClient_CreateAssignment_Success(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
 
-	teacherUser := User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleTeacher,
-	}
-
-	student1 := User{
-		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
-		Name: "John Doe",
-		Role: RoleStudent,
-	}
-
-	student2 := User{
-		ID:   "48483e93-4c63-4f96-875b-abdada724bba",
-		Name: "Jane Doe",
-		Role: RoleStudent,
-	}
-	stg.users = append(stg.users, teacherUser, student1, student2)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, CtxCallerKey, teacherUser.ID)
-
-	assignment, err := client.CreateAssignment(ctx, "Some assignment", []User{student1, student2})
+	assignment, err := client.CreateAssignment(callerCtx(teacher), "Some assignment", []User{student1, student2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,16 +123,9 @@ func TestClient_CreateAssignment_Success(t *testing.T) {
 func TestClient_AddFeedback_AssignmentNotFound(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
-
-	student1 := User{
-		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
-		Name: "John Doe",
-		Role: RoleStudent,
-	}
 	stg.users = append(stg.users, student1)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, CtxCallerKey, student1.ID)
-	_, err := client.AddFeedback(ctx, "invalid id", Answer{})
+
+	_, err := client.AddFeedback(callerCtx(student1), "invalid id", Answer{})
 	if err == nil || err.Error() != ErrAssignmentNotFound {
 		t.Fatal("expected error with message", ErrAssignmentNotFound)
 	}
@@ -171,37 +134,12 @@ func TestClient_AddFeedback_AssignmentNotFound(t *testing.T) {
 func TestClient_AddFeedback_Unauthorized(t *testing.T) {
 	stg := newFakeStorge()
 	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
 
-	teacherUser := User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleTeacher,
-	}
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Some assignment", []User{student1, student2})
 
-	student1 := User{
-		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
-		Name: "John Doe",
-		Role: RoleStudent,
-	}
-
-	student2 := User{
-		ID:   "48483e93-4c63-4f96-875b-abdada724bba",
-		Name: "Jane Doe",
-		Role: RoleStudent,
-	}
-	stg.users = append(stg.users, teacherUser, student1, student2)
-	ctx := context.Background()
-	ctx = context.WithValue(ctx, CtxCallerKey, teacherUser.ID)
-
-	assignment, _ := client.CreateAssignment(ctx, "Some assignment", []User{student1, student2})
-
-	student3 := User{
-		ID:   "fb402398-a4c0-4ba9-92ac-99ca2708adbe",
-		Name: "Jack Doe",
-		Role: RoleStudent,
-	}
-	ctx = context.WithValue(ctx, CtxCallerKey, student3.ID)
-	_, err := client.AddFeedback(ctx, assignment.ID, Answer{})
+	// student3 is not a member of the assignment team
+	_, err := client.AddFeedback(callerCtx(student3), assignment.ID, Answer{})
 	if err == nil || err.Error() != ErrUnauthorizedMsg {
 		t.Fatal("expected error with message", ErrUnauthorizedMsg)
 	}
