@@ -10,30 +10,35 @@ import (
 // Shared test users
 var (
 	teacher = User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleTeacher,
+		ID:    "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
+		Name:  "Tom John",
+		Email: "tom.john@school.edu",
+		Role:  RoleTeacher,
 	}
 	student1 = User{
-		ID:   "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
-		Name: "John Doe",
-		Role: RoleStudent,
+		ID:    "4fcc9f90-627b-418d-ab59-bf34c7a5b9e4",
+		Name:  "John Doe",
+		Email: "john.doe@school.edu",
+		Role:  RoleStudent,
 	}
 	student2 = User{
-		ID:   "48483e93-4c63-4f96-875b-abdada724bba",
-		Name: "Jane Doe",
-		Role: RoleStudent,
+		ID:    "48483e93-4c63-4f96-875b-abdada724bba",
+		Name:  "Jane Doe",
+		Email: "jane.doe@school.edu",
+		Role:  RoleStudent,
 	}
 	student3 = User{
-		ID:   "fb402398-a4c0-4ba9-92ac-99ca2708adbe",
-		Name: "Jack Doe",
-		Role: RoleStudent,
+		ID:    "fb402398-a4c0-4ba9-92ac-99ca2708adbe",
+		Name:  "Jack Doe",
+		Email: "jack.doe@school.edu",
+		Role:  RoleStudent,
 	}
 	// nonTeacher is a student used to test unauthorized teacher-only actions.
 	nonTeacher = User{
-		ID:   "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
-		Name: "Tom John",
-		Role: RoleStudent,
+		ID:    "a6b2bbf8-ef1e-459b-87ec-24375cc3c90d",
+		Name:  "Tom John",
+		Email: "tom.john@school.edu",
+		Role:  RoleStudent,
 	}
 )
 
@@ -451,6 +456,49 @@ func TestClient_GetAssignments_StudentNoAssignments(t *testing.T) {
 	}
 }
 
+func TestClient_GetUserByEmail_MissingCaller(t *testing.T) {
+	client := NewClient(newFakeStorage())
+
+	_, err := client.GetUserByEmail(context.Background(), "john.doe@school.edu")
+
+	if err == nil || err.Error() != ErrMissingCallerKey {
+		t.Fatal("expected error with message", ErrMissingCallerKey)
+	}
+}
+
+func TestClient_GetUserByEmail_NotFound(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher)
+
+	_, err := client.GetUserByEmail(callerCtx(teacher), "nonexistent@school.edu")
+
+	if err == nil || err.Error() != ErrUserNotFound {
+		t.Fatal("expected error with message", ErrUserNotFound)
+	}
+}
+
+func TestClient_GetUserByEmail_Success(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1)
+
+	result, err := client.GetUserByEmail(callerCtx(teacher), student1.Email)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result.ID != student1.ID {
+		t.Fatal("expected user ID to match")
+	}
+	if result.Email != student1.Email {
+		t.Fatal("expected user email to match")
+	}
+	if result.Name != student1.Name {
+		t.Fatal("expected user name to match")
+	}
+}
+
 type fakeStorage struct {
 	users       []User
 	assignments map[string]Assignment
@@ -471,6 +519,15 @@ func (f *fakeStorage) WriteUser(user User) error {
 func (f *fakeStorage) ReadUser(userId string) (User, error) {
 	for _, user := range f.users {
 		if user.ID == userId {
+			return user, nil
+		}
+	}
+	return User{}, errors.New("user not found")
+}
+
+func (f *fakeStorage) ReadUserByEmail(email string) (User, error) {
+	for _, user := range f.users {
+		if user.Email == email {
 			return user, nil
 		}
 	}

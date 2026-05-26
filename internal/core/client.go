@@ -19,6 +19,7 @@ const (
 	ErrInvalidContributions = "contributions must include exactly one entry per team member"
 	ErrEmptyDescription    = "all contribution descriptions must be non-empty"
 	ErrInvalidWeights      = "contribution weights must sum to 100"
+	ErrUserNotFound        = "user not found"
 )
 
 // Client is the entrypoint for all Teamback operations
@@ -28,6 +29,21 @@ type Client struct {
 
 func NewClient(storage Storage) *Client {
 	return &Client{storage: storage}
+}
+
+// GetUserByEmail retrieves a user by their email address.
+// Any authenticated user can look up another user by email.
+func (c *Client) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	_, err := c.requireAuth(ctx)
+	if err != nil {
+		return User{}, err
+	}
+
+	user, err := c.storage.ReadUserByEmail(email)
+	if err != nil {
+		return User{}, errors.New(ErrUserNotFound)
+	}
+	return user, nil
 }
 
 // AddUser adds a new user to the system. Only teachers can add users.
