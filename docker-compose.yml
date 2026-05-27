@@ -1,10 +1,8 @@
 services:
   postgres:
     image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: teamback
-      POSTGRES_PASSWORD: teamback
-      POSTGRES_DB: teamback
+    env_file:
+      - docker.env
     ports:
       - "5432:5432"
     volumes:
@@ -14,21 +12,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - app-network
 
   app:
     build: .
     ports:
       - "8080:8080"
-    environment:
-      PORT: "8080"
-      DATABASE_URL: "postgres://teamback:teamback@postgres:5432/teamback?sslmode=disable"
-      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID}"
-      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET}"
-      GOOGLE_REDIRECT_URL: "${GOOGLE_REDIRECT_URL:-http://localhost:8080/auth/callback}"
-      SESSION_SECRET: "${SESSION_SECRET}"
+    env_file:
+      - docker.env
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   pgdata:
