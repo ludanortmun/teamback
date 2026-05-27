@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ludanortmun/teamback/internal/config"
+	"github.com/ludanortmun/teamback/internal/core"
 	"github.com/ludanortmun/teamback/internal/database"
 	"github.com/urfave/cli"
 )
@@ -71,24 +72,27 @@ func runAddUser(c *cli.Context) error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
+	teambackDb := database.NewTeambackDatabase(db)
+
 	id := uuid.NewString()
 	name := c.String("name")
 	email := c.String("email")
 	teacher := c.Bool("teacher")
-	role := "student"
+	role := core.RoleStudent
 
 	if teacher {
 		log.Printf("adding teacher user %s (%s)", name, email)
-		role = "teacher"
+		role = core.RoleTeacher
 	} else {
 		log.Printf("adding user %s (%s)", name, email)
 	}
 
-	query := `INSERT INTO users (id, name, email, role) VALUES (?, ?, ?, ?)`
-	_, err = db.Exec(query, id, name, email, role)
-	if err != nil {
-		return fmt.Errorf("adding user: %w", err)
+	user := core.User{
+		ID:    id,
+		Name:  name,
+		Email: email,
+		Role:  role,
 	}
 
-	return nil
+	return teambackDb.WriteUser(user)
 }
