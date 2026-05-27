@@ -19,13 +19,13 @@ func main() {
 	app.UsageText = "Teamback management CLI [global options]"
 
 	app.Commands = []cli.Command{
-		cli.Command{
+		{
 			Name:      "users",
 			Aliases:   []string{"u"},
 			Usage:     "Manage users",
 			UsageText: `manage users`,
 			Subcommands: []cli.Command{
-				cli.Command{
+				{
 					Name:  "add",
 					Usage: "add a new user",
 					Flags: []cli.Flag{
