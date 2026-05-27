@@ -40,6 +40,8 @@
 <p>No feedback submitted yet.</p>
 {{end}}
 
+{{if $.IsStudent}}
 <a href="/assignments/{{.ID}}/feedback" class="btn">Submit Feedback</a>
+{{end}}
 {{end}}
 {{end}}

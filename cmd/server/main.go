@@ -45,7 +45,7 @@ func run() error {
 
 	client := core.NewClient(teambackDb)
 
-	h, err := handler.New(client, "templates")
+	h, err := handler.New(client, sessions, teambackDb, "templates")
 	if err != nil {
 		return fmt.Errorf("initializing handlers: %w", err)
 	}
@@ -75,13 +75,14 @@ func run() error {
 
 	// Protected routes (require authentication)
 	authMw := middleware.RequireAuth(sessions)
+	studentMw := middleware.RequireRole(sessions, teambackDb, core.RoleStudent)
 
 	mux.Handle("GET /assignments", authMw(http.HandlerFunc(h.HandleListAssignments)))
 	mux.Handle("GET /assignments/new", authMw(http.HandlerFunc(h.HandleNewAssignment)))
 	mux.Handle("POST /assignments", authMw(http.HandlerFunc(h.HandleCreateAssignment)))
 	mux.Handle("GET /assignments/{id}", authMw(http.HandlerFunc(h.HandleViewAssignment)))
-	mux.Handle("GET /assignments/{id}/feedback", authMw(http.HandlerFunc(h.HandleNewFeedback)))
-	mux.Handle("POST /assignments/{id}/feedback", authMw(http.HandlerFunc(h.HandleCreateFeedback)))
+	mux.Handle("GET /assignments/{id}/feedback", studentMw(http.HandlerFunc(h.HandleNewFeedback)))
+	mux.Handle("POST /assignments/{id}/feedback", studentMw(http.HandlerFunc(h.HandleCreateFeedback)))
 	mux.Handle("GET /users/new", authMw(http.HandlerFunc(h.HandleNewUser)))
 	mux.Handle("POST /users", authMw(http.HandlerFunc(h.HandleCreateUser)))
 

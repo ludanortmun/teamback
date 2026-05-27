@@ -23,9 +23,9 @@ func (h *Handler) HandleNewFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Render(w, "feedback_new.html", map[string]any{
+	h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
 		"Assignment": assignment,
-	})
+	}))
 }
 
 func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
@@ -82,10 +82,10 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(errs) > 0 {
-		h.Render(w, "feedback_new.html", map[string]any{
+		h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
 			"Assignment": assignment,
 			"Errors":     errs,
-		})
+		}))
 		return
 	}
 
@@ -95,10 +95,10 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.Client.AddFeedback(ctx, id, answer)
 	if err != nil {
-		h.Render(w, "feedback_new.html", map[string]any{
+		h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
 			"Assignment": assignment,
 			"Errors":     []string{err.Error()},
-		})
+		}))
 		return
 	}
 

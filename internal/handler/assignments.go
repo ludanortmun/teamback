@@ -8,7 +8,7 @@ import (
 )
 
 func (h *Handler) HandleNewAssignment(w http.ResponseWriter, r *http.Request) {
-	h.Render(w, "assignment_new.html", nil)
+	h.Render(w, "assignment_new.html", h.templateData(r, nil))
 }
 
 func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request) {
@@ -40,11 +40,11 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 	}
 
 	if len(errs) > 0 {
-		h.Render(w, "assignment_new.html", map[string]any{
+		h.Render(w, "assignment_new.html", h.templateData(r, map[string]any{
 			"Errors":     errs,
 			"Title":      title,
 			"TeamEmails": teamEmails,
-		})
+		}))
 		return
 	}
 
@@ -61,21 +61,21 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 	}
 
 	if len(errs) > 0 {
-		h.Render(w, "assignment_new.html", map[string]any{
+		h.Render(w, "assignment_new.html", h.templateData(r, map[string]any{
 			"Errors":     errs,
 			"Title":      title,
 			"TeamEmails": teamEmails,
-		})
+		}))
 		return
 	}
 
 	_, err := h.Client.CreateAssignment(ctx, title, team)
 	if err != nil {
-		h.Render(w, "assignment_new.html", map[string]any{
+		h.Render(w, "assignment_new.html", h.templateData(r, map[string]any{
 			"Errors":     []string{err.Error()},
 			"Title":      title,
 			"TeamEmails": teamEmails,
-		})
+		}))
 		return
 	}
 
@@ -90,9 +90,9 @@ func (h *Handler) HandleListAssignments(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	h.Render(w, "assignments.html", map[string]any{
+	h.Render(w, "assignments.html", h.templateData(r, map[string]any{
 		"Assignments": assignments,
-	})
+	}))
 }
 
 func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
@@ -109,7 +109,7 @@ func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Render(w, "assignment.html", map[string]any{
+	h.Render(w, "assignment.html", h.templateData(r, map[string]any{
 		"Assignment": assignment,
-	})
+	}))
 }

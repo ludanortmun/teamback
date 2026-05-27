@@ -3,8 +3,10 @@
 {{define "content"}}
 <h1>Assignments</h1>
 
+{{if .IsTeacher}}
 <a href="/assignments/new" class="btn">New Assignment</a>
 <a href="/users/new" class="btn">Add Student</a>
+{{end}}
 
 {{if .Assignments}}
 <table>
