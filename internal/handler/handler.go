@@ -36,7 +36,11 @@ func New(client *core.Client, sessions *auth.SessionStore, storage core.Storage,
 		if name == "layout.html" {
 			continue
 		}
-		t, err := template.Must(layout.Clone()).ParseFiles(page)
+		cloned, err := layout.Clone()
+		if err != nil {
+			return nil, err
+		}
+		t, err := cloned.ParseFiles(page)
 		if err != nil {
 			return nil, err
 		}
