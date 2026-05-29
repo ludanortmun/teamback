@@ -90,7 +90,7 @@ func (h *Handler) HandleHome(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/assignments", http.StatusSeeOther)
 		return
 	}
-	h.Render(w, "home.html", nil)
+	h.Render(w, "home.html", h.templateData(r, nil))
 }
 
 func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -98,5 +98,5 @@ func (h *Handler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/assignments", http.StatusSeeOther)
 		return
 	}
-	h.Render(w, "login.html", nil)
+	h.Render(w, "login.html", h.templateData(r, nil))
 }

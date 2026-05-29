@@ -21,10 +21,10 @@ A simple web application for gathering feedback on group school projects. Teache
 1. Copy the example environment file and fill in your credentials:
 
    ```sh
-   cp .env.example .env
+   cp .env.example .env.docker
    ```
 
-   Edit `.env` with your Google OAuth client ID, secret, and a random session secret.
+   Edit `.env.docker` with your Google OAuth client ID, secret, and a random session secret.
 
 2. Start the application:
 
