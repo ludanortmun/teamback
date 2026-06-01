@@ -11,8 +11,10 @@ import (
 
 	"github.com/ludanortmun/teamback/internal/auth"
 	"github.com/ludanortmun/teamback/internal/config"
+	"github.com/ludanortmun/teamback/internal/core"
 	"github.com/ludanortmun/teamback/internal/database"
 	"github.com/ludanortmun/teamback/internal/handler"
+	"github.com/ludanortmun/teamback/internal/middleware"
 )
 
 func main() {
@@ -37,12 +39,13 @@ func run() error {
 		return fmt.Errorf("running migrations: %w", err)
 	}
 
-	// TODO: Replace with proper constructor once ready
 	teambackDb := database.NewTeambackDatabase(db)
 
 	sessions := auth.NewSessionStore(cfg.SessionSecret)
 
-	h, err := handler.New(db, "templates")
+	client := core.NewClient(teambackDb)
+
+	h, err := handler.New(client, sessions, teambackDb, "templates")
 	if err != nil {
 		return fmt.Errorf("initializing handlers: %w", err)
 	}
@@ -69,6 +72,20 @@ func run() error {
 	mux.HandleFunc("GET /auth/login", oidc.HandleLogin)
 	mux.HandleFunc("GET /auth/callback", oidc.HandleCallback)
 	mux.HandleFunc("GET /auth/logout", oidc.HandleLogout)
+
+	// Protected routes (require authentication)
+	authMw := middleware.RequireAuth(sessions)
+	teacherMw := middleware.RequireRole(sessions, teambackDb, core.RoleTeacher)
+	studentMw := middleware.RequireRole(sessions, teambackDb, core.RoleStudent)
+
+	mux.Handle("GET /assignments", authMw(http.HandlerFunc(h.HandleListAssignments)))
+	mux.Handle("GET /assignments/new", teacherMw(http.HandlerFunc(h.HandleNewAssignment)))
+	mux.Handle("POST /assignments", teacherMw(http.HandlerFunc(h.HandleCreateAssignment)))
+	mux.Handle("GET /assignments/{id}", authMw(http.HandlerFunc(h.HandleViewAssignment)))
+	mux.Handle("GET /assignments/{id}/feedback", studentMw(http.HandlerFunc(h.HandleNewFeedback)))
+	mux.Handle("POST /assignments/{id}/feedback", studentMw(http.HandlerFunc(h.HandleCreateFeedback)))
+	mux.Handle("GET /users/new", teacherMw(http.HandlerFunc(h.HandleNewUser)))
+	mux.Handle("POST /users", teacherMw(http.HandlerFunc(h.HandleCreateUser)))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

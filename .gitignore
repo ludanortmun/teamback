@@ -13,7 +13,8 @@
 *.out
 
 # Environment
-.env
+*.env
+.env.*
 
 # Database
 *.db

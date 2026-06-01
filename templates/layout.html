@@ -10,7 +10,16 @@
     <nav>
         <a href="/" class="brand">Teamback</a>
         <div class="nav-links">
-            {{block "nav" .}}{{end}}
+            {{if .User}}
+                <a href="/assignments">Assignments</a>
+                {{if .IsTeacher}}
+                    <a href="/assignments/new">New Assignment</a>
+                    <a href="/users/new">Add Student</a>
+                {{end}}
+                <a href="/auth/logout" class="btn btn-small">Logout</a>
+            {{else}}
+                <a href="/login">Login</a>
+            {{end}}
         </div>
     </nav>
     <main>

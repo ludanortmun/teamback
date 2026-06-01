@@ -1,10 +1,8 @@
 services:
   postgres:
     image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: teamback
-      POSTGRES_PASSWORD: teamback
-      POSTGRES_DB: teamback
+    env_file:
+      - .env.docker
     ports:
       - "5432:5432"
     volumes:
@@ -14,6 +12,24 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - app-network
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env.docker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
 
 volumes:
   pgdata:

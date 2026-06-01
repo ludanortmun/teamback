@@ -1,0 +1,47 @@
+{{template "layout" .}}
+
+{{define "content"}}
+{{with .Assignment}}
+<h1>{{.Title}}</h1>
+
+<h2>Team</h2>
+<ul>
+    {{range .Team}}
+    <li>{{.Name}} ({{.Email}})</li>
+    {{end}}
+</ul>
+
+<h2>Feedback</h2>
+{{if .Feedback}}
+{{range .Feedback}}
+<div class="feedback-entry">
+    <h3>By: {{.Author.Name}}</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Description</th>
+                <th>Weight</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $id, $contrib := .MemberContributions}}
+            <tr>
+                <td>{{range $.Assignment.Team}}{{if eq .ID $id}}{{.Name}}{{end}}{{end}}</td>
+                <td>{{$contrib.Description}}</td>
+                <td>{{$contrib.Weight}}%</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+{{else}}
+<p>No feedback submitted yet.</p>
+{{end}}
+
+{{if $.IsStudent}}
+<a href="/assignments/{{.ID}}/feedback" class="btn">Submit Feedback</a>
+{{end}}
+{{end}}
+{{end}}

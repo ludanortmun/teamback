@@ -66,7 +66,8 @@ func (h *OIDCHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		MaxAge:   300,
 	})
 
-	url := h.oauthConfig.AuthCodeURL(state)
+	url := h.oauthConfig.AuthCodeURL(state,
+		oauth2.SetAuthURLParam("prompt", "select_account"))
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 }
 

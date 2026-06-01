@@ -1,0 +1,23 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<h1>Create Assignment</h1>
+
+{{if .Errors}}
+<div class="errors">
+    {{range .Errors}}<p class="error">{{.}}</p>{{end}}
+</div>
+{{end}}
+
+<form method="POST" action="/assignments">
+    <div class="form-group">
+        <label for="title">Title</label>
+        <input type="text" id="title" name="title" value="{{if .Title}}{{.Title}}{{end}}" required>
+    </div>
+    <div class="form-group">
+        <label for="team_emails">Team Member Emails (comma-separated)</label>
+        <textarea id="team_emails" name="team_emails" rows="4" required>{{if .TeamEmails}}{{.TeamEmails}}{{end}}</textarea>
+    </div>
+    <button type="submit" class="btn">Create Assignment</button>
+</form>
+{{end}}
