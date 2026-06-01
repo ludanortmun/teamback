@@ -27,7 +27,7 @@
         <tbody>
             {{range $id, $contrib := .MemberContributions}}
             <tr>
-                <td>{{$id}}</td>
+                <td>{{range $.Assignment.Team}}{{if eq .ID $id}}{{.Name}}{{end}}{{end}}</td>
                 <td>{{$contrib.Description}}</td>
                 <td>{{$contrib.Weight}}%</td>
             </tr>

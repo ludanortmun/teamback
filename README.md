@@ -24,7 +24,7 @@ A simple web application for gathering feedback on group school projects. Teache
    cp .env.example .env.docker
    ```
 
-   Edit `.env.docker` with your Google OAuth client ID, secret, and a random session secret.
+   Edit `.env.docker` with your Google OAuth client ID, secret, a random session secret, and set `DATABASE_URL=postgres://teamback:teamback@postgres:5432/teamback?sslmode=disable`.
 
 2. Start the application:
 

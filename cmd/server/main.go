@@ -75,20 +75,17 @@ func run() error {
 
 	// Protected routes (require authentication)
 	authMw := middleware.RequireAuth(sessions)
+	teacherMw := middleware.RequireRole(sessions, teambackDb, core.RoleTeacher)
 	studentMw := middleware.RequireRole(sessions, teambackDb, core.RoleStudent)
 
 	mux.Handle("GET /assignments", authMw(http.HandlerFunc(h.HandleListAssignments)))
-	// TODO: restrict to teacher role (currently enforced inside core/client.go)
-	mux.Handle("GET /assignments/new", authMw(http.HandlerFunc(h.HandleNewAssignment)))
-	// TODO: restrict to teacher role (currently enforced inside core/client.go)
-	mux.Handle("POST /assignments", authMw(http.HandlerFunc(h.HandleCreateAssignment)))
+	mux.Handle("GET /assignments/new", teacherMw(http.HandlerFunc(h.HandleNewAssignment)))
+	mux.Handle("POST /assignments", teacherMw(http.HandlerFunc(h.HandleCreateAssignment)))
 	mux.Handle("GET /assignments/{id}", authMw(http.HandlerFunc(h.HandleViewAssignment)))
 	mux.Handle("GET /assignments/{id}/feedback", studentMw(http.HandlerFunc(h.HandleNewFeedback)))
 	mux.Handle("POST /assignments/{id}/feedback", studentMw(http.HandlerFunc(h.HandleCreateFeedback)))
-	// TODO: restrict to teacher role (currently enforced inside core/client.go)
-	mux.Handle("GET /users/new", authMw(http.HandlerFunc(h.HandleNewUser)))
-	// TODO: restrict to teacher role (currently enforced inside core/client.go)
-	mux.Handle("POST /users", authMw(http.HandlerFunc(h.HandleCreateUser)))
+	mux.Handle("GET /users/new", teacherMw(http.HandlerFunc(h.HandleNewUser)))
+	mux.Handle("POST /users", teacherMw(http.HandlerFunc(h.HandleCreateUser)))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

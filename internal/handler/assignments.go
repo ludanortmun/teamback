@@ -24,13 +24,20 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 	}
 
 	var emails []string
+	seenEmails := map[string]bool{}
 	if teamEmails != "" {
 		for _, e := range strings.Split(teamEmails, ",") {
 			trimmed := strings.TrimSpace(e)
 			if trimmed != "" {
 				if !emailRegex.MatchString(trimmed) {
 					errs = append(errs, "Invalid email: "+trimmed)
+					continue
 				}
+				if seenEmails[trimmed] {
+					errs = append(errs, "Duplicate email: "+trimmed)
+					continue
+				}
+				seenEmails[trimmed] = true
 				emails = append(emails, trimmed)
 			}
 		}
