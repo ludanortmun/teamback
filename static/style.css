@@ -14,7 +14,6 @@ body {
 nav {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 1rem 2rem;
     background: #fff;
     border-bottom: 1px solid #e5e7eb;
@@ -25,6 +24,18 @@ nav .brand {
     font-weight: 700;
     color: #111;
     text-decoration: none;
+}
+
+span.flex-fill{
+    flex: auto;
+}
+
+nav .nav-links {
+    margin-left: 1rem;
+}
+
+nav .auth-links span {
+    padding-right: 1rem;
 }
 
 main {
@@ -68,4 +79,78 @@ h1 {
 .login-container p {
     margin-bottom: 1.5rem;
     color: #6b7280;
+}
+
+section.content-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem 0;
+}
+
+section.content-header h1 {
+    margin: 0;
+}
+
+.assignment-grid {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.assignment-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.assignment-card__title {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: #111827;
+}
+
+.assignment-card__meta {
+    display: grid;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+    color: #374151;
+}
+
+.assignment-card__actions a {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.assignment-card__actions a:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+thead th {
+    text-align: left;
+    font-weight: 600;
+    color: #111827;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+tbody td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+tbody tr:last-child td {
+    border-bottom: 0;
 }

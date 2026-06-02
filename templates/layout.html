@@ -7,23 +7,28 @@
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <nav>
-        <a href="/" class="brand">Teamback</a>
-        <div class="nav-links">
-            {{if .User}}
-                <a href="/assignments">Assignments</a>
-                {{if .IsTeacher}}
-                    <a href="/assignments/new">New Assignment</a>
-                    <a href="/users/new">Add Student</a>
-                {{end}}
-                <a href="/auth/logout" class="btn btn-small">Logout</a>
-            {{else}}
-                <a href="/login">Login</a>
-            {{end}}
-        </div>
-    </nav>
-    <main>
-        {{block "content" .}}{{end}}
-    </main>
+<nav>
+    <a href="/" class="brand">Teamback</a>
+    {{if .User}}
+    <div class="nav-links">
+        <a href="/assignments">Mis actividades</a>
+        {{if .IsTeacher}}
+        <a href="/users/new">Agregar estudiante</a>
+        {{end}}
+    </div>
+    {{end}}
+    <span class="flex-fill"></span>
+    <div class="auth-links">
+        {{if .User}}
+        <span>Bienvenido, {{.User.Name}}</span>
+        <a href="/auth/logout" class="btn btn-small">Logout</a>
+        {{else}}
+        <a href="/login" class="btn btn-small">Login</a>
+        {{end}}
+    </div>
+</nav>
+<main>
+    {{block "content" .}}{{end}}
+</main>
 </body>
 </html>{{end}}
