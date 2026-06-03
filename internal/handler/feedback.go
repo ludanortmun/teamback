@@ -5,9 +5,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ludanortmun/teamback/internal/core"
 )
+
+const feedbackDescriptionMaxChars = 2000
 
 func (h *Handler) HandleNewFeedback(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -63,6 +66,9 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 
 		if desc == "" {
 			errs = append(errs, fmt.Sprintf("La descripción de %s es obligatoria", member.Name))
+		}
+		if utf8.RuneCountInString(desc) > feedbackDescriptionMaxChars {
+			errs = append(errs, fmt.Sprintf("La descripción de %s no puede superar los %d caracteres", member.Name, feedbackDescriptionMaxChars))
 		}
 
 		if weightStr == "" {

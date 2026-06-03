@@ -29,7 +29,7 @@
         <h2>{{.Name}}</h2>
         <div class="form-group">
             <label for="description_{{.ID}}">Describe las aportaciones realizadas por {{.Name}}</label>
-            <textarea id="description_{{.ID}}" name="description_{{.ID}}" rows="2" required>{{if $.ExistingAnswer}}{{with index $.ExistingAnswer.MemberContributions .ID}}{{.Description}}{{end}}{{end}}</textarea>
+            <textarea id="description_{{.ID}}" name="description_{{.ID}}" rows="2" maxlength="2000" required>{{if $.ExistingAnswer}}{{with index $.ExistingAnswer.MemberContributions .ID}}{{.Description}}{{end}}{{end}}</textarea>
         </div>
         <div class="form-group">
             <label for="weight_{{.ID}}">Porcentaje de trabajo realizado por {{.Name}}</label>
