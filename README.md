@@ -34,6 +34,23 @@ A simple web application for gathering feedback on group school projects. Teache
 
    This builds the app image and starts both PostgreSQL and the server. The app is available at `http://localhost:8080`.
 
+3. **(Production) Configure PostgreSQL data directory:**
+
+   By default, PostgreSQL data is stored in a Docker-managed named volume. To persist data at a specific host path, set the `PGDATA_PATH` environment variable:
+
+   ```sh
+   PGDATA_PATH=/var/lib/teamback/pgdata docker compose up
+   ```
+
+   Ensure the directory exists and has appropriate permissions before starting:
+
+   ```sh
+   sudo mkdir -p /var/lib/teamback/pgdata
+   sudo chown 70:70 /var/lib/teamback/pgdata
+   ```
+
+   The expected production path is `/var/lib/teamback/pgdata`.
+
 ## Local Development (without Docker)
 
 1. Install dependencies:
