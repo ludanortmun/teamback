@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/ludanortmun/teamback/internal/core"
+	"github.com/ludanortmun/teamback/internal/middleware"
 )
 
 func (h *Handler) HandleNewAssignment(w http.ResponseWriter, r *http.Request) {
@@ -116,7 +117,83 @@ func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.Render(w, "assignment.html", h.templateData(r, map[string]any{
+	data := map[string]any{
 		"Assignment": assignment,
+	}
+
+	// Load AI summary for teachers
+	userID := middleware.GetUserID(r.Context())
+	if userID != "" {
+		if user, err := h.Storage.ReadUser(userID); err == nil && user.Role == core.RoleTeacher {
+			if summary, err := h.Client.GetAssignmentSummary(ctx, id); err == nil {
+				data["Summary"] = summary
+			}
+		}
+	}
+
+	h.Render(w, "assignment.html", h.templateData(r, data))
+}
+
+func (h *Handler) HandleListSummaries(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "El ID de la actividad es obligatorio", http.StatusBadRequest)
+		return
+	}
+
+	ctx := h.authCtx(r)
+	assignment, err := h.Client.GetAssignment(ctx, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	summaries, err := h.Client.ListAssignmentSummaries(ctx, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.Render(w, "summaries.html", h.templateData(r, map[string]any{
+		"Assignment": assignment,
+		"Summaries":  summaries,
+	}))
+}
+
+func (h *Handler) HandleFeedbackHistory(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	authorId := r.PathValue("authorId")
+	if id == "" || authorId == "" {
+		http.Error(w, "Parámetros inválidos", http.StatusBadRequest)
+		return
+	}
+
+	ctx := h.authCtx(r)
+	assignment, err := h.Client.GetAssignment(ctx, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	history, err := h.Client.ListFeedbackHistory(ctx, id, authorId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Get author name
+	var authorName string
+	for _, member := range assignment.Team {
+		if member.ID == authorId {
+			authorName = member.Name
+			break
+		}
+	}
+
+	h.Render(w, "feedback_history.html", h.templateData(r, map[string]any{
+		"Assignment": assignment,
+		"History":    history,
+		"AuthorName": authorName,
+		"AuthorID":   authorId,
 	}))
 }

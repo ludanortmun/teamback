@@ -617,6 +617,103 @@ func TestClient_GetUserByEmail_Success(t *testing.T) {
 	}
 }
 
+func TestClient_GetAssignmentSummary_StudentUnauthorized(t *testing.T) {
+	stg := newFakeStorage()
+	ss := &fakeSummaryStorage{}
+	client := NewClient(stg, WithSummarizer(nil, ss, nil))
+	stg.users = append(stg.users, student1)
+
+	_, err := client.GetAssignmentSummary(callerCtx(student1), "assignment-1")
+	if err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected unauthorized error for student")
+	}
+}
+
+func TestClient_ListFeedbackHistory_StudentUnauthorized(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, student1)
+
+	_, err := client.ListFeedbackHistory(callerCtx(student1), "assignment-1", "author-1")
+	if err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected unauthorized error for student")
+	}
+}
+
+func TestClient_ListFeedbackHistory_TeacherSuccess(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment := Assignment{
+		ID:   "a1",
+		Team: []User{student1, student2},
+		Feedback: []Answer{
+			{Author: student1, MemberContributions: map[string]Contribution{
+				student1.ID: {Description: "Did work", Weight: 50},
+				student2.ID: {Description: "Also worked", Weight: 50},
+			}},
+		},
+	}
+	stg.assignments["a1"] = assignment
+
+	history, err := client.ListFeedbackHistory(callerCtx(teacher), "a1", student1.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(history) != 1 {
+		t.Fatalf("expected 1 history entry, got %d", len(history))
+	}
+}
+
+type fakeSummaryStorage struct {
+	summaries []AssignmentSummary
+}
+
+func (f *fakeSummaryStorage) CreateSummary(assignmentID string) (AssignmentSummary, error) {
+	s := AssignmentSummary{ID: "sum-1", AssignmentID: assignmentID, Status: "pending"}
+	f.summaries = append(f.summaries, s)
+	return s, nil
+}
+
+func (f *fakeSummaryStorage) CompleteSummary(id string, summary string) error {
+	for i := range f.summaries {
+		if f.summaries[i].ID == id {
+			f.summaries[i].Status = "completed"
+			f.summaries[i].Summary = summary
+		}
+	}
+	return nil
+}
+
+func (f *fakeSummaryStorage) FailSummary(id string) error {
+	for i := range f.summaries {
+		if f.summaries[i].ID == id {
+			f.summaries[i].Status = "failed"
+		}
+	}
+	return nil
+}
+
+func (f *fakeSummaryStorage) GetLatestSummary(assignmentID string) (AssignmentSummary, error) {
+	for i := len(f.summaries) - 1; i >= 0; i-- {
+		if f.summaries[i].AssignmentID == assignmentID {
+			return f.summaries[i], nil
+		}
+	}
+	return AssignmentSummary{}, errors.New("no summary found")
+}
+
+func (f *fakeSummaryStorage) ListSummaries(assignmentID string) ([]AssignmentSummary, error) {
+	var result []AssignmentSummary
+	for _, s := range f.summaries {
+		if s.AssignmentID == assignmentID {
+			result = append(result, s)
+		}
+	}
+	return result, nil
+}
+
 type fakeStorage struct {
 	users       []User
 	assignments map[string]Assignment
@@ -671,4 +768,18 @@ func (f *fakeStorage) ListAssignments() ([]Assignment, error) {
 		result = append(result, a)
 	}
 	return result, nil
+}
+
+func (f *fakeStorage) ListFeedbackHistory(assignmentID string, authorID string) ([]Answer, error) {
+	assignment, ok := f.assignments[assignmentID]
+	if !ok {
+		return nil, errors.New(ErrAssignmentNotFound)
+	}
+	var history []Answer
+	for _, a := range assignment.Feedback {
+		if a.Author.ID == authorID {
+			history = append(history, a)
+		}
+	}
+	return history, nil
 }

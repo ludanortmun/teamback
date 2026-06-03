@@ -9,6 +9,22 @@
     {{end}}
 </section>
 
+{{if .IsTeacher}}
+{{if .Summary}}
+<section class="panel assignment-section">
+    <h2>Resumen IA</h2>
+    {{if eq .Summary.Status "pending"}}
+    <p class="empty-state">Resumen con IA en proceso...</p>
+    {{else if eq .Summary.Status "completed"}}
+    <div class="summary-text">{{.Summary.Summary}}</div>
+    {{else if eq .Summary.Status "failed"}}
+    <p class="empty-state">No se pudo generar el resumen con IA.</p>
+    {{end}}
+    <p style="margin-top: 0.75rem;"><a href="/assignments/{{.Assignment.ID}}/summaries">Ver historial de resúmenes</a></p>
+</section>
+{{end}}
+{{end}}
+
 {{with .Assignment}}
 <section class="panel assignment-section">
     <h2>Equipo</h2>
@@ -24,7 +40,11 @@
     {{if .Feedback}}
     {{range .Feedback}}
     <div class="feedback-entry">
-        <h3>Enviada por {{.Author.Name}}</h3>
+        <h3>Enviada por {{.Author.Name}}
+            {{if $.IsTeacher}}
+            <a href="/assignments/{{$.Assignment.ID}}/feedback/{{.Author.ID}}/history" style="font-size: 0.85rem; font-weight: normal; margin-left: 0.5rem;">Ver historial</a>
+            {{end}}
+        </h3>
         <table>
             <thead>
                 <tr>

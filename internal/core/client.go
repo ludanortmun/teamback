@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"log"
 	"slices"
 
 	"github.com/google/uuid"
@@ -24,11 +25,28 @@ const (
 
 // Client is the entrypoint for all Teamback operations
 type Client struct {
-	storage Storage
+	storage        Storage
+	summaryStorage SummaryStorage
+	summarizer     Summarizer
+	workerSubmit   func(func())
 }
 
-func NewClient(storage Storage) *Client {
-	return &Client{storage: storage}
+type ClientOption func(*Client)
+
+func WithSummarizer(s Summarizer, ss SummaryStorage, submit func(func())) ClientOption {
+	return func(c *Client) {
+		c.summarizer = s
+		c.summaryStorage = ss
+		c.workerSubmit = submit
+	}
+}
+
+func NewClient(storage Storage, opts ...ClientOption) *Client {
+	c := &Client{storage: storage}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
 }
 
 // GetUserByEmail retrieves a user by their email address.
@@ -117,7 +135,43 @@ func (c *Client) AddFeedback(ctx context.Context, assignmentId string, answer An
 		return Assignment{}, err
 	}
 
+	// Trigger async AI summary generation
+	c.triggerSummary(assignmentId)
+
 	return assignment, nil
+}
+
+// triggerSummary starts an asynchronous AI summary job for the assignment.
+func (c *Client) triggerSummary(assignmentID string) {
+	if c.summarizer == nil || c.summaryStorage == nil || c.workerSubmit == nil {
+		return
+	}
+
+	summary, err := c.summaryStorage.CreateSummary(assignmentID)
+	if err != nil {
+		log.Printf("ERROR: failed to create summary record for assignment %s: %v", assignmentID, err)
+		return
+	}
+
+	c.workerSubmit(func() {
+		assignment, err := c.storage.GetAssignment(assignmentID)
+		if err != nil {
+			log.Printf("ERROR: failed to load assignment %s for summary: %v", assignmentID, err)
+			_ = c.summaryStorage.FailSummary(summary.ID)
+			return
+		}
+
+		result, err := c.summarizer.Summarize(assignment, assignment.Feedback)
+		if err != nil {
+			log.Printf("ERROR: AI summary failed for assignment %s: %v", assignmentID, err)
+			_ = c.summaryStorage.FailSummary(summary.ID)
+			return
+		}
+
+		if err := c.summaryStorage.CompleteSummary(summary.ID, result); err != nil {
+			log.Printf("ERROR: failed to save summary for assignment %s: %v", assignmentID, err)
+		}
+	})
 }
 
 // validateAnswer checks that the answer has valid contributions for the given team.
@@ -244,4 +298,42 @@ func (c *Client) requireAuth(ctx context.Context) (User, error) {
 
 func generateID() string {
 	return uuid.New().String()
+}
+
+// GetAssignmentSummary returns the latest AI summary for the assignment (teacher-only).
+func (c *Client) GetAssignmentSummary(ctx context.Context, assignmentID string) (AssignmentSummary, error) {
+	_, err := c.requireRole(ctx, RoleTeacher)
+	if err != nil {
+		return AssignmentSummary{}, err
+	}
+
+	if c.summaryStorage == nil {
+		return AssignmentSummary{}, errors.New("AI features are disabled")
+	}
+
+	return c.summaryStorage.GetLatestSummary(assignmentID)
+}
+
+// ListAssignmentSummaries returns all summary snapshots for an assignment (teacher-only).
+func (c *Client) ListAssignmentSummaries(ctx context.Context, assignmentID string) ([]AssignmentSummary, error) {
+	_, err := c.requireRole(ctx, RoleTeacher)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.summaryStorage == nil {
+		return nil, errors.New("AI features are disabled")
+	}
+
+	return c.summaryStorage.ListSummaries(assignmentID)
+}
+
+// ListFeedbackHistory returns all feedback versions for a given author on an assignment (teacher-only).
+func (c *Client) ListFeedbackHistory(ctx context.Context, assignmentID string, authorID string) ([]Answer, error) {
+	_, err := c.requireRole(ctx, RoleTeacher)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.storage.ListFeedbackHistory(assignmentID, authorID)
 }

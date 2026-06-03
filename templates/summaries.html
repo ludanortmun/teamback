@@ -1,0 +1,28 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<section class="content-header">
+    <h1>Historial de resúmenes IA</h1>
+</section>
+
+<p style="margin-bottom: 1rem;"><a href="/assignments/{{.Assignment.ID}}">← Volver a {{.Assignment.Title}}</a></p>
+
+{{if .Summaries}}
+{{range .Summaries}}
+<section class="panel assignment-section">
+    <h2>{{.CreatedAt.Format "02/01/2006 15:04"}}</h2>
+    {{if eq .Status "pending"}}
+    <p class="empty-state">Resumen en proceso...</p>
+    {{else if eq .Status "completed"}}
+    <div class="summary-text">{{.Summary}}</div>
+    {{else if eq .Status "failed"}}
+    <p class="empty-state">No se pudo generar el resumen.</p>
+    {{end}}
+</section>
+{{end}}
+{{else}}
+<section class="panel assignment-section">
+    <p class="empty-state">No hay resúmenes generados para esta actividad.</p>
+</section>
+{{end}}
+{{end}}

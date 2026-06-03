@@ -3,7 +3,9 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ludanortmun/teamback/internal/auth"
 	"github.com/ludanortmun/teamback/internal/core"
@@ -112,17 +114,21 @@ func (t *TeambackDatabase) SaveAssignment(assignment core.Assignment) error {
 		}
 	}
 
-	// Sync answers and contributions
-	// Delete old answers (cascades to contributions)
-	_, err = tx.Exec(`DELETE FROM answers WHERE assignment_id = $1`, assignment.ID)
-	if err != nil {
-		return fmt.Errorf("clearing answers: %w", err)
-	}
+	// Insert answers as new versions (never overwrite)
 	for _, answer := range assignment.Feedback {
-		answerID := assignment.ID + ":" + answer.Author.ID
+		var nextVersion int
+		err = tx.QueryRow(
+			`SELECT COALESCE(MAX(version), 0) + 1 FROM answers WHERE assignment_id = $1 AND author_id = $2`,
+			assignment.ID, answer.Author.ID,
+		).Scan(&nextVersion)
+		if err != nil {
+			return fmt.Errorf("getting next version: %w", err)
+		}
+
+		answerID := fmt.Sprintf("%s:%s:%d", assignment.ID, answer.Author.ID, nextVersion)
 		_, err = tx.Exec(
-			`INSERT INTO answers (id, assignment_id, author_id) VALUES ($1, $2, $3)`,
-			answerID, assignment.ID, answer.Author.ID,
+			`INSERT INTO answers (id, assignment_id, author_id, version) VALUES ($1, $2, $3, $4)`,
+			answerID, assignment.ID, answer.Author.ID, nextVersion,
 		)
 		if err != nil {
 			return fmt.Errorf("inserting answer: %w", err)
@@ -246,12 +252,14 @@ func (t *TeambackDatabase) loadAssignmentTeam(assignmentID string) ([]core.User,
 }
 
 func (t *TeambackDatabase) loadAssignmentFeedback(assignmentID string) ([]core.Answer, error) {
-	// TODO: Replace per-answer contribution lookups with a single JOIN/bulk query.
+	// Load only the latest version of each author's answer
 	rows, err := t.db.Query(
-		`SELECT a.id, a.author_id, u.name, u.email, u.role
+		`SELECT a.id, a.author_id, u.name, u.email, u.role, a.version, a.submitted_at
 		 FROM answers a
 		 JOIN users u ON u.id = a.author_id
-		 WHERE a.assignment_id = $1`, assignmentID,
+		 WHERE a.assignment_id = $1
+		   AND a.version = (SELECT MAX(a2.version) FROM answers a2 WHERE a2.assignment_id = a.assignment_id AND a2.author_id = a.author_id)`,
+		assignmentID,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("loading feedback: %w", err)
@@ -261,7 +269,9 @@ func (t *TeambackDatabase) loadAssignmentFeedback(assignmentID string) ([]core.A
 	var feedback []core.Answer
 	for rows.Next() {
 		var answerID, authorID, authorName, authorEmail, roleStr string
-		if err := rows.Scan(&answerID, &authorID, &authorName, &authorEmail, &roleStr); err != nil {
+		var version int
+		var submittedAt time.Time
+		if err := rows.Scan(&answerID, &authorID, &authorName, &authorEmail, &roleStr, &version, &submittedAt); err != nil {
 			return nil, fmt.Errorf("scanning answer: %w", err)
 		}
 
@@ -278,9 +288,53 @@ func (t *TeambackDatabase) loadAssignmentFeedback(assignmentID string) ([]core.A
 				Role:  parseRole(roleStr),
 			},
 			MemberContributions: contribs,
+			Version:             version,
+			SubmittedAt:         submittedAt,
 		})
 	}
 	return feedback, rows.Err()
+}
+
+func (t *TeambackDatabase) ListFeedbackHistory(assignmentID string, authorID string) ([]core.Answer, error) {
+	rows, err := t.db.Query(
+		`SELECT a.id, a.version, a.submitted_at
+		 FROM answers a
+		 WHERE a.assignment_id = $1 AND a.author_id = $2
+		 ORDER BY a.version DESC`, assignmentID, authorID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing feedback history: %w", err)
+	}
+	defer rows.Close()
+
+	// Load the author info once
+	author, err := t.ReadUser(authorID)
+	if err != nil {
+		return nil, fmt.Errorf("reading author: %w", err)
+	}
+
+	var history []core.Answer
+	for rows.Next() {
+		var answerID string
+		var version int
+		var submittedAt time.Time
+		if err := rows.Scan(&answerID, &version, &submittedAt); err != nil {
+			return nil, fmt.Errorf("scanning feedback history: %w", err)
+		}
+
+		contribs, err := t.loadContributions(answerID)
+		if err != nil {
+			return nil, err
+		}
+
+		history = append(history, core.Answer{
+			Author:              author,
+			MemberContributions: contribs,
+			Version:             version,
+			SubmittedAt:         submittedAt,
+		})
+	}
+	return history, rows.Err()
 }
 
 func (t *TeambackDatabase) loadContributions(answerID string) (map[string]core.Contribution, error) {
@@ -309,4 +363,93 @@ func parseRole(s string) core.Role {
 		return core.RoleTeacher
 	}
 	return core.RoleStudent
+}
+
+// SummaryStorage implementation
+
+func (t *TeambackDatabase) CreateSummary(assignmentID string) (core.AssignmentSummary, error) {
+	id := uuid.New().String()
+	now := time.Now()
+	_, err := t.db.Exec(
+		`INSERT INTO assignment_summaries (id, assignment_id, status, created_at) VALUES ($1, $2, 'pending', $3)`,
+		id, assignmentID, now,
+	)
+	if err != nil {
+		return core.AssignmentSummary{}, fmt.Errorf("creating summary: %w", err)
+	}
+	return core.AssignmentSummary{
+		ID:           id,
+		AssignmentID: assignmentID,
+		Status:       "pending",
+		CreatedAt:    now,
+	}, nil
+}
+
+func (t *TeambackDatabase) CompleteSummary(id string, summary string) error {
+	_, err := t.db.Exec(
+		`UPDATE assignment_summaries SET summary = $1, status = 'completed', completed_at = NOW() WHERE id = $2`,
+		summary, id,
+	)
+	if err != nil {
+		return fmt.Errorf("completing summary: %w", err)
+	}
+	return nil
+}
+
+func (t *TeambackDatabase) FailSummary(id string) error {
+	_, err := t.db.Exec(
+		`UPDATE assignment_summaries SET status = 'failed', completed_at = NOW() WHERE id = $1`, id,
+	)
+	if err != nil {
+		return fmt.Errorf("failing summary: %w", err)
+	}
+	return nil
+}
+
+func (t *TeambackDatabase) GetLatestSummary(assignmentID string) (core.AssignmentSummary, error) {
+	var s core.AssignmentSummary
+	var completedAt sql.NullTime
+	err := t.db.QueryRow(
+		`SELECT id, assignment_id, summary, status, created_at, completed_at
+		 FROM assignment_summaries
+		 WHERE assignment_id = $1
+		 ORDER BY created_at DESC LIMIT 1`, assignmentID,
+	).Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.CreatedAt, &completedAt)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return core.AssignmentSummary{}, fmt.Errorf("no summary found for assignment %s", assignmentID)
+		}
+		return core.AssignmentSummary{}, fmt.Errorf("getting latest summary: %w", err)
+	}
+	if completedAt.Valid {
+		s.CompletedAt = &completedAt.Time
+	}
+	return s, nil
+}
+
+func (t *TeambackDatabase) ListSummaries(assignmentID string) ([]core.AssignmentSummary, error) {
+	rows, err := t.db.Query(
+		`SELECT id, assignment_id, summary, status, created_at, completed_at
+		 FROM assignment_summaries
+		 WHERE assignment_id = $1
+		 ORDER BY created_at DESC`, assignmentID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("listing summaries: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []core.AssignmentSummary
+	for rows.Next() {
+		var s core.AssignmentSummary
+		var completedAt sql.NullTime
+		if err := rows.Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.CreatedAt, &completedAt); err != nil {
+			return nil, fmt.Errorf("scanning summary: %w", err)
+		}
+		if completedAt.Valid {
+			s.CompletedAt = &completedAt.Time
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, rows.Err()
 }

@@ -1,5 +1,7 @@
 package core
 
+import "time"
+
 type Role int
 
 const (
@@ -30,6 +32,8 @@ type Assignment struct {
 type Answer struct {
 	Author              User
 	MemberContributions map[string]Contribution
+	Version             int
+	SubmittedAt         time.Time
 }
 
 // Contribution contains a plain-text description of a student's contribution to the Assignment,
@@ -37,4 +41,14 @@ type Answer struct {
 type Contribution struct {
 	Description string
 	Weight      uint8
+}
+
+// AssignmentSummary represents an AI-generated summary for an assignment.
+type AssignmentSummary struct {
+	ID           string
+	AssignmentID string
+	Summary      string
+	Status       string // "pending", "completed", "failed"
+	CreatedAt    time.Time
+	CompletedAt  *time.Time
 }

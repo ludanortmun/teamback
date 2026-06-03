@@ -1,0 +1,39 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<section class="content-header">
+    <h1>Historial de retroalimentación — {{.AuthorName}}</h1>
+</section>
+
+<p style="margin-bottom: 1rem;"><a href="/assignments/{{.Assignment.ID}}">← Volver a {{.Assignment.Title}}</a></p>
+
+{{if .History}}
+{{range .History}}
+<section class="panel assignment-section">
+    <h2>Versión {{.Version}} — {{.SubmittedAt.Format "02/01/2006 15:04"}}</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Integrante</th>
+                <th>Descripción</th>
+                <th>Porcentaje</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $id, $contrib := .MemberContributions}}
+            <tr>
+                <td>{{range $.Assignment.Team}}{{if eq .ID $id}}{{.Name}}{{end}}{{end}}</td>
+                <td>{{$contrib.Description}}</td>
+                <td>{{$contrib.Weight}}%</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</section>
+{{end}}
+{{else}}
+<section class="panel assignment-section">
+    <p class="empty-state">No hay historial de retroalimentación para este estudiante.</p>
+</section>
+{{end}}
+{{end}}

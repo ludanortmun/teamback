@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"strconv"
 
 	"github.com/joho/godotenv"
 )
@@ -14,11 +16,29 @@ type Config struct {
 	GoogleClientSecret string
 	GoogleRedirectURL  string
 	SessionSecret      string
+
+	// AI configuration
+	OpenAIAPIKey     string
+	OpenAIBaseURL    string
+	OpenAIModel      string
+	AIWorkerPoolSize int
+	AIEnabled        bool
 }
 
 func Load() (*Config, error) {
 	// .env is optional; in production, env vars are set directly.
 	_ = godotenv.Load()
+
+	poolSize, _ := strconv.Atoi(getEnv("AI_WORKER_POOL_SIZE", "1"))
+	if poolSize < 1 {
+		poolSize = 1
+	}
+
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	aiEnabled := apiKey != ""
+	if !aiEnabled {
+		log.Println("WARNING: OPENAI_API_KEY not set — AI summary features are disabled")
+	}
 
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
@@ -27,6 +47,12 @@ func Load() (*Config, error) {
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/callback"),
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
+
+		OpenAIAPIKey:     apiKey,
+		OpenAIBaseURL:    getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		OpenAIModel:      getEnv("OPENAI_MODEL", "gpt-5-mini"),
+		AIWorkerPoolSize: poolSize,
+		AIEnabled:        aiEnabled,
 	}
 
 	if cfg.GoogleClientID == "" {
