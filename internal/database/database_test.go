@@ -161,19 +161,21 @@ func TestSaveAndGetAssignment(t *testing.T) {
 		ID:    "assign-1",
 		Title: "Sprint 1",
 		Team:  []core.User{alice, bob},
-		Feedback: []core.Answer{
-			{
-				Author: alice,
-				MemberContributions: map[string]core.Contribution{
-					"user-1": {Description: "Did frontend", Weight: 50},
-					"user-2": {Description: "Did backend", Weight: 50},
-				},
-			},
-		},
 	}
 
 	if err := tdb.SaveAssignment(assignment); err != nil {
 		t.Fatalf("SaveAssignment: %v", err)
+	}
+
+	answer := core.Answer{
+		Author: alice,
+		MemberContributions: map[string]core.Contribution{
+			"user-1": {Description: "Did frontend", Weight: 50},
+			"user-2": {Description: "Did backend", Weight: 50},
+		},
+	}
+	if err := tdb.SaveAnswerVersion("assign-1", answer); err != nil {
+		t.Fatalf("SaveAnswerVersion: %v", err)
 	}
 
 	got, err := tdb.GetAssignment("assign-1")
@@ -192,6 +194,87 @@ func TestSaveAndGetAssignment(t *testing.T) {
 	}
 	if len(got.Feedback[0].MemberContributions) != 2 {
 		t.Errorf("expected 2 contributions, got %d", len(got.Feedback[0].MemberContributions))
+	}
+}
+
+func TestSaveAnswerVersion(t *testing.T) {
+	tdb := setupTestDB(t)
+
+	// Create team members
+	alice := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
+	bob := core.User{ID: "user-2", Name: "Bob", Email: "bob@test.com", Role: core.RoleStudent}
+	if err := tdb.WriteUser(alice); err != nil {
+		t.Fatalf("WriteUser alice: %v", err)
+	}
+	if err := tdb.WriteUser(bob); err != nil {
+		t.Fatalf("WriteUser bob: %v", err)
+	}
+
+	// Create assignment (no feedback via SaveAssignment)
+	assignment := core.Assignment{
+		ID:    "assign-1",
+		Title: "Sprint 1",
+		Team:  []core.User{alice, bob},
+	}
+	if err := tdb.SaveAssignment(assignment); err != nil {
+		t.Fatalf("SaveAssignment: %v", err)
+	}
+
+	// Save Alice's answer version 1
+	answer1 := core.Answer{
+		Author: alice,
+		MemberContributions: map[string]core.Contribution{
+			"user-1": {Description: "Did frontend", Weight: 60},
+			"user-2": {Description: "Did backend", Weight: 40},
+		},
+	}
+	if err := tdb.SaveAnswerVersion("assign-1", answer1); err != nil {
+		t.Fatalf("SaveAnswerVersion (v1): %v", err)
+	}
+
+	// Save Alice's answer version 2
+	answer2 := core.Answer{
+		Author: alice,
+		MemberContributions: map[string]core.Contribution{
+			"user-1": {Description: "Did frontend v2", Weight: 50},
+			"user-2": {Description: "Did backend v2", Weight: 50},
+		},
+	}
+	if err := tdb.SaveAnswerVersion("assign-1", answer2); err != nil {
+		t.Fatalf("SaveAnswerVersion (v2): %v", err)
+	}
+
+	// Verify: GetAssignment should only show latest version
+	got, err := tdb.GetAssignment("assign-1")
+	if err != nil {
+		t.Fatalf("GetAssignment: %v", err)
+	}
+	if len(got.Feedback) != 1 {
+		t.Fatalf("expected 1 feedback entry (latest), got %d", len(got.Feedback))
+	}
+	if got.Feedback[0].Version != 2 {
+		t.Errorf("expected version 2, got %d", got.Feedback[0].Version)
+	}
+	if got.Feedback[0].MemberContributions["user-1"].Description != "Did frontend v2" {
+		t.Errorf("unexpected description: %s", got.Feedback[0].MemberContributions["user-1"].Description)
+	}
+
+	// Verify: Bob has no answer versions
+	history, err := tdb.ListFeedbackHistory("assign-1", "user-2")
+	if err != nil {
+		t.Fatalf("ListFeedbackHistory bob: %v", err)
+	}
+	if len(history) != 0 {
+		t.Errorf("expected 0 history entries for bob, got %d", len(history))
+	}
+
+	// Verify: Alice has 2 versions in history
+	history, err = tdb.ListFeedbackHistory("assign-1", "user-1")
+	if err != nil {
+		t.Fatalf("ListFeedbackHistory alice: %v", err)
+	}
+	if len(history) != 2 {
+		t.Errorf("expected 2 history entries for alice, got %d", len(history))
 	}
 }
 
