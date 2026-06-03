@@ -1,9 +1,15 @@
 {{template "layout" .}}
 
 {{define "content"}}
-{{with .Assignment}}
-<h1>{{.Title}}</h1>
+<section class="content-header">
+    <h1>{{.Assignment.Title}}</h1>
+    <span class="flex-fill"></span>
+    {{if .IsStudent}}
+    <a href="/assignments/{{.Assignment.ID}}/feedback" class="btn">Enviar retroalimentación</a>
+    {{end}}
+</section>
 
+{{with .Assignment}}
 <h2>Team</h2>
 <ul>
     {{range .Team}}
@@ -40,8 +46,5 @@
 <p>No feedback submitted yet.</p>
 {{end}}
 
-{{if $.IsStudent}}
-<a href="/assignments/{{.ID}}/feedback" class="btn">Submit Feedback</a>
-{{end}}
 {{end}}
 {{end}}

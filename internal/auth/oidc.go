@@ -108,7 +108,7 @@ func (h *OIDCHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.storage.ReadUserByEmail(userInfo.Email)
+	user, err := h.storage.ReadUserByEmail(strings.ToLower(userInfo.Email))
 	if err != nil {
 		if strings.Contains(err.Error(), "not registered") {
 			http.Error(w, "Your account is not registered. Contact your teacher.", http.StatusForbidden)

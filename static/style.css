@@ -154,3 +154,21 @@ tbody td {
 tbody tr:last-child td {
     border-bottom: 0;
 }
+
+.member-feedback-form {
+    padding: 2rem 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.member-feedback-form:last-of-type {
+    border-bottom: none;
+}
+
+.member-feedback-form .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.member-feedback-form .form-control textarea {
+    resize: vertical;
+}

@@ -23,8 +23,15 @@ func (h *Handler) HandleNewFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Safe to make this assumption since AuthZ ensures students only have access to their own submissions
+	var existingAnswer *core.Answer
+	if len(assignment.Feedback) > 0 {
+		existingAnswer = &assignment.Feedback[0]
+	}
+
 	h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
-		"Assignment": assignment,
+		"Assignment":     assignment,
+		"ExistingAnswer": existingAnswer,
 	}))
 }
 
@@ -43,7 +50,9 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var errs []string
-	contributions := make(map[string]core.Contribution)
+	answer := core.Answer{
+		MemberContributions: make(map[string]core.Contribution),
+	}
 
 	for _, member := range assignment.Team {
 		descKey := fmt.Sprintf("description_%s", member.ID)
@@ -75,7 +84,7 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		contributions[member.ID] = core.Contribution{
+		answer.MemberContributions[member.ID] = core.Contribution{
 			Description: desc,
 			Weight:      uint8(weight),
 		}
@@ -83,21 +92,19 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 
 	if len(errs) > 0 {
 		h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
-			"Assignment": assignment,
-			"Errors":     errs,
+			"Assignment":     assignment,
+			"ExistingAnswer": &answer,
+			"Errors":         errs,
 		}))
 		return
-	}
-
-	answer := core.Answer{
-		MemberContributions: contributions,
 	}
 
 	_, err = h.Client.AddFeedback(ctx, id, answer)
 	if err != nil {
 		h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
-			"Assignment": assignment,
-			"Errors":     []string{err.Error()},
+			"Assignment":     assignment,
+			"ExistingAnswer": &answer,
+			"Errors":         []string{err.Error()},
 		}))
 		return
 	}

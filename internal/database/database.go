@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/ludanortmun/teamback/internal/auth"
 	"github.com/ludanortmun/teamback/internal/core"
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Open connects to a PostgreSQL database using the given DSN.
@@ -37,8 +37,8 @@ func (t *TeambackDatabase) WriteUser(user core.User) error {
 	}
 	_, err := t.db.Exec(
 		`INSERT INTO users (id, name, email, role)
-		 VALUES ($1, $2, $3, $4)
-		 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, email = EXCLUDED.email, role = EXCLUDED.role`,
+		 VALUES ($1, $2, LOWER($3), $4)
+		 ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, email = LOWER(EXCLUDED.email), role = EXCLUDED.role`,
 		user.ID, user.Name, user.Email, roleStr,
 	)
 	if err != nil {
@@ -67,7 +67,7 @@ func (t *TeambackDatabase) ReadUserByEmail(email string) (core.User, error) {
 	var user core.User
 	var roleStr string
 	err := t.db.QueryRow(
-		`SELECT id, name, email, role FROM users WHERE email = $1`, email,
+		`SELECT id, name, email, role FROM users WHERE LOWER(email) = LOWER($1)`, email,
 	).Scan(&user.ID, &user.Name, &user.Email, &roleStr)
 	if err != nil {
 		if err == sql.ErrNoRows {

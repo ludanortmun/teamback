@@ -290,6 +290,124 @@ func TestClient_AddFeedback_Success(t *testing.T) {
 	}
 }
 
+func TestClient_AddFeedback_OverwriteExisting(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	initial := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Initial self review", Weight: 50},
+			student2.ID: {Description: "Initial peer review", Weight: 50},
+		},
+	}
+	updated := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Updated self review", Weight: 40},
+			student2.ID: {Description: "Updated peer review", Weight: 60},
+		},
+	}
+
+	if _, err := client.AddFeedback(callerCtx(student1), assignment.ID, initial); err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.AddFeedback(callerCtx(student1), assignment.ID, updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(result.Feedback) != 1 {
+		t.Fatalf("expected one feedback entry after overwrite, got %d", len(result.Feedback))
+	}
+	if result.Feedback[0].Author.ID != student1.ID {
+		t.Fatal("expected feedback author to remain student1")
+	}
+	if result.Feedback[0].MemberContributions[student1.ID].Description != "Updated self review" {
+		t.Fatal("expected updated feedback data to be returned")
+	}
+	if result.Feedback[0].MemberContributions[student2.ID].Weight != 60 {
+		t.Fatal("expected updated feedback weights to be returned")
+	}
+
+	stored := stg.assignments[assignment.ID]
+	if len(stored.Feedback) != 1 {
+		t.Fatalf("expected one persisted feedback entry after overwrite, got %d", len(stored.Feedback))
+	}
+	if stored.Feedback[0].MemberContributions[student1.ID].Description != "Updated self review" {
+		t.Fatal("expected persisted feedback to be overwritten")
+	}
+}
+
+func TestClient_AddFeedback_OverwriteDoesNotAffectOthers(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	assignment, _ := client.CreateAssignment(callerCtx(teacher), "Assignment", []User{student1, student2})
+
+	student1Initial := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Student1 initial self review", Weight: 50},
+			student2.ID: {Description: "Student1 initial peer review", Weight: 50},
+		},
+	}
+	student2Answer := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Student2 peer review", Weight: 45},
+			student2.ID: {Description: "Student2 self review", Weight: 55},
+		},
+	}
+	student1Updated := Answer{
+		MemberContributions: map[string]Contribution{
+			student1.ID: {Description: "Student1 updated self review", Weight: 35},
+			student2.ID: {Description: "Student1 updated peer review", Weight: 65},
+		},
+	}
+
+	if _, err := client.AddFeedback(callerCtx(student1), assignment.ID, student1Initial); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.AddFeedback(callerCtx(student2), assignment.ID, student2Answer); err != nil {
+		t.Fatal(err)
+	}
+	result, err := client.AddFeedback(callerCtx(student1), assignment.ID, student1Updated)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(result.Feedback) != 2 {
+		t.Fatalf("expected two feedback entries after overwrite, got %d", len(result.Feedback))
+	}
+
+	student1FeedbackIndex := slices.IndexFunc(result.Feedback, func(answer Answer) bool {
+		return answer.Author.ID == student1.ID
+	})
+	if student1FeedbackIndex < 0 {
+		t.Fatal("expected student1 feedback to exist")
+	}
+	if result.Feedback[student1FeedbackIndex].MemberContributions[student1.ID].Description != "Student1 updated self review" {
+		t.Fatal("expected student1 feedback to be updated")
+	}
+	if result.Feedback[student1FeedbackIndex].MemberContributions[student2.ID].Weight != 65 {
+		t.Fatal("expected student1 feedback weights to be updated")
+	}
+
+	student2FeedbackIndex := slices.IndexFunc(result.Feedback, func(answer Answer) bool {
+		return answer.Author.ID == student2.ID
+	})
+	if student2FeedbackIndex < 0 {
+		t.Fatal("expected student2 feedback to exist")
+	}
+	if result.Feedback[student2FeedbackIndex].MemberContributions[student2.ID].Description != "Student2 self review" {
+		t.Fatal("expected student2 feedback to remain unchanged")
+	}
+	if result.Feedback[student2FeedbackIndex].MemberContributions[student1.ID].Weight != 45 {
+		t.Fatal("expected student2 feedback weights to remain unchanged")
+	}
+}
+
 func TestClient_GetAssignment_NotFound(t *testing.T) {
 	stg := newFakeStorage()
 	client := NewClient(stg)

@@ -22,7 +22,11 @@
         <tr>
             <td>{{.Title}}</td>
             <td>
-                <a href="/assignments/{{.ID}}">View</a>
+                {{if $.IsStudent}}
+                <a href="/assignments/{{.ID}}/feedback">Ver respuestas</a>
+                {{else}}
+                <a href="/assignments/{{.ID}}">Enviar retroalimentación</a>
+                {{end}}
             </td>
         </tr>
         {{end}}

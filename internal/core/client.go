@@ -106,7 +106,13 @@ func (c *Client) AddFeedback(ctx context.Context, assignmentId string, answer An
 	}
 
 	answer.Author = caller
-	assignment.Feedback = append(assignment.Feedback, answer)
+	if index := slices.IndexFunc(assignment.Feedback, func(existing Answer) bool {
+		return existing.Author.ID == caller.ID
+	}); index >= 0 {
+		assignment.Feedback[index] = answer
+	} else {
+		assignment.Feedback = append(assignment.Feedback, answer)
+	}
 	if err := c.storage.SaveAssignment(assignment); err != nil {
 		return Assignment{}, err
 	}

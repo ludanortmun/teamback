@@ -2,7 +2,7 @@
 
 {{define "content"}}
 {{with .Assignment}}
-<h1>Submit Feedback: {{.Title}}</h1>
+<h1>Retroalimentación del equipo ({{.Title}})</h1>
 
 {{if $.Errors}}
 <div class="errors">
@@ -11,23 +11,28 @@
 {{end}}
 
 <form method="POST" action="/assignments/{{.ID}}/feedback">
-    <p>Rate each team member's contribution. Weights must sum to 100.</p>
+    <p>
+        Describe a continuación las contribuciones de cada miembro del equipo,
+        incluyendo un porcentaje aproximado del trabajo realizado por cada uno.
+    </p>
+    <p>
+        <strong>Estas respuestas solo podrán ser vistas por ti y por tu profesor.</strong>
+    </p>
 
     {{range .Team}}
-    <fieldset>
-        <legend>{{.Name}} ({{.Email}})</legend>
+    <div class="member-feedback-form">
         <div class="form-group">
-            <label for="description_{{.ID}}">Description</label>
-            <textarea id="description_{{.ID}}" name="description_{{.ID}}" rows="2" required></textarea>
+            <label for="description_{{.ID}}">Describe las aportaciones realizadas por {{.Name}}</label>
+            <textarea id="description_{{.ID}}" name="description_{{.ID}}" rows="2" required>{{if $.ExistingAnswer}}{{with index $.ExistingAnswer.MemberContributions .ID}}{{.Description}}{{end}}{{end}}</textarea>
         </div>
         <div class="form-group">
-            <label for="weight_{{.ID}}">Weight (%)</label>
-            <input type="number" id="weight_{{.ID}}" name="weight_{{.ID}}" min="0" max="100" required>
+            <label for="weight_{{.ID}}">Porcentaje de trabajo realizado por {{.Name}}</label>
+            <input type="number" id="weight_{{.ID}}" name="weight_{{.ID}}" min="0" max="100" required {{if $.ExistingAnswer}}{{with index $.ExistingAnswer.MemberContributions .ID}}value="{{.Weight}}"{{end}}{{end}}>
         </div>
-    </fieldset>
+    </div>
     {{end}}
 
-    <button type="submit" class="btn">Submit Feedback</button>
+    <button type="submit" class="btn">Enviar</button>
 </form>
 {{end}}
 {{end}}
