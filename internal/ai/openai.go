@@ -177,10 +177,13 @@ func buildUserPrompt(assignment core.Assignment, feedback []core.Answer, nameToA
 	for _, answer := range feedback {
 		authorAlias := nameToAlias[answer.Author.ID]
 		sb.WriteString(fmt.Sprintf("--- Respuesta de %s ---\n", authorAlias))
-		for memberID, contrib := range answer.MemberContributions {
-			memberAlias := nameToAlias[memberID]
+		for _, member := range assignment.Team {
+			contrib := answer.MemberContributions[member.ID]
+			memberAlias := nameToAlias[member.ID]
 			sb.WriteString(fmt.Sprintf("- %s: %d%% — %s\n", memberAlias, contrib.Weight, contrib.Description))
 		}
+		sb.WriteString("\n")
+	}
 		sb.WriteString("\n")
 	}
 
