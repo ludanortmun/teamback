@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ludanortmun/teamback/internal/core"
 )
@@ -25,7 +26,7 @@ func NewOpenAIClient(apiKey, baseURL, model string) *OpenAIClient {
 		apiKey:  apiKey,
 		baseURL: strings.TrimRight(baseURL, "/"),
 		model:   model,
-		client:  &http.Client{},
+		client:  &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
@@ -182,8 +183,6 @@ func buildUserPrompt(assignment core.Assignment, feedback []core.Answer, nameToA
 			memberAlias := nameToAlias[member.ID]
 			sb.WriteString(fmt.Sprintf("- %s: %d%% — %s\n", memberAlias, contrib.Weight, contrib.Description))
 		}
-		sb.WriteString("\n")
-	}
 		sb.WriteString("\n")
 	}
 

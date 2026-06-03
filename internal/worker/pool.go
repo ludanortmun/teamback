@@ -4,8 +4,8 @@ import "sync"
 
 // Pool is a simple goroutine worker pool that limits concurrent task execution.
 type Pool struct {
-	sem  chan struct{}
-	wg   sync.WaitGroup
+	sem chan struct{}
+	wg  sync.WaitGroup
 }
 
 // NewPool creates a worker pool with the given max concurrency.
@@ -19,17 +19,17 @@ func NewPool(size int) *Pool {
 }
 
 // Submit enqueues a task to be executed by the pool.
-// It blocks if all workers are busy.
+// If all workers are busy, then the spawned task waits until one is available.
+// This method will never block.
 func (p *Pool) Submit(task func()) {
-	p.wg.Add(1)
-	go func() {
-		p.sem <- struct{}{}
-		defer func() {
-			<-p.sem
-			p.wg.Done()
-		}()
-		task()
-	}()
+	p.wg.Go(
+		func() {
+			p.sem <- struct{}{}
+			defer func() {
+				<-p.sem
+			}()
+			task()
+		})
 }
 
 // Shutdown waits for all submitted tasks to complete.

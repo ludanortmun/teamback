@@ -19,12 +19,12 @@ type Config struct {
 	SessionSecret      string
 
 	// AI configuration
-	OpenAIAPIKey      string
-	OpenAIBaseURL     string
-	OpenAIModel       string
-	AIWorkerPoolSize  int
-	AIRetryInterval   time.Duration
-	AIEnabled         bool
+	OpenAIAPIKey     string
+	OpenAIBaseURL    string
+	OpenAIModel      string
+	AIWorkerPoolSize int
+	AIRetryInterval  time.Duration
+	AIEnabled        bool
 }
 
 func Load() (*Config, error) {
@@ -55,12 +55,12 @@ func Load() (*Config, error) {
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/callback"),
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
 
-		OpenAIAPIKey:      apiKey,
-		OpenAIBaseURL:     getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-		OpenAIModel:       getEnv("OPENAI_MODEL", "gpt-5-mini"),
-		AIWorkerPoolSize:  poolSize,
-		AIRetryInterval:   retryInterval,
-		AIEnabled:         aiEnabled,
+		OpenAIAPIKey:     apiKey,
+		OpenAIBaseURL:    getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+		OpenAIModel:      getEnv("OPENAI_MODEL", "gpt-5-mini"),
+		AIWorkerPoolSize: poolSize,
+		AIRetryInterval:  retryInterval,
+		AIEnabled:        aiEnabled,
 	}
 
 	if cfg.GoogleClientID == "" {
