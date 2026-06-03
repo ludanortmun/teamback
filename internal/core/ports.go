@@ -10,6 +10,7 @@ type Storage interface {
 	ListAssignments() ([]Assignment, error)
 	// ListFeedbackHistory returns all feedback versions for a given author on an assignment (newest first).
 	ListFeedbackHistory(assignmentID string, authorID string) ([]Answer, error)
+	SaveAnswerVersion(assignmentID string, answer Answer) error
 }
 
 // SummaryStorage handles persistence for AI-generated assignment summaries.
@@ -18,6 +19,7 @@ type SummaryStorage interface {
 	CompleteSummary(id string, summary string, attentionRequired bool) error
 	FailSummary(id string) error
 	GetLatestSummary(assignmentID string) (AssignmentSummary, error)
+	GetLatestSummaries(assignmentIDs []string) ([]AssignmentSummary, error)
 	ListSummaries(assignmentID string) ([]AssignmentSummary, error)
 	// GetRetryableSummaries returns failed summaries with attempts < maxAttempts
 	// that have not been superseded by a newer summary for the same assignment.

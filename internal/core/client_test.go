@@ -705,6 +705,19 @@ func (f *fakeSummaryStorage) GetLatestSummary(assignmentID string) (AssignmentSu
 	return AssignmentSummary{}, errors.New("no summary found")
 }
 
+func (f *fakeSummaryStorage) GetLatestSummaries(assignmentIDs []string) ([]AssignmentSummary, error) {
+	var result []AssignmentSummary
+	for _, assignmentID := range assignmentIDs {
+		for i := len(f.summaries) - 1; i >= 0; i-- {
+			if f.summaries[i].AssignmentID == assignmentID {
+				result = append(result, f.summaries[i])
+				break
+			}
+		}
+	}
+	return result, nil
+}
+
 func (f *fakeSummaryStorage) ListSummaries(assignmentID string) ([]AssignmentSummary, error) {
 	var result []AssignmentSummary
 	for _, s := range f.summaries {
@@ -772,6 +785,22 @@ func (f *fakeStorage) ReadUserByEmail(email string) (User, error) {
 
 func (f *fakeStorage) SaveAssignment(assignment Assignment) error {
 	f.assignments[assignment.ID] = assignment
+	return nil
+}
+
+func (f *fakeStorage) SaveAnswerVersion(assignmentID string, answer Answer) error {
+	assignment, ok := f.assignments[assignmentID]
+	if !ok {
+		return errors.New(ErrAssignmentNotFound)
+	}
+	if index := slices.IndexFunc(assignment.Feedback, func(existing Answer) bool {
+		return existing.Author.ID == answer.Author.ID
+	}); index >= 0 {
+		assignment.Feedback[index] = answer
+	} else {
+		assignment.Feedback = append(assignment.Feedback, answer)
+	}
+	f.assignments[assignmentID] = assignment
 	return nil
 }
 

@@ -103,10 +103,14 @@ func (h *Handler) HandleListAssignments(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.GetUserID(r.Context())
 	if userID != "" {
 		if user, err := h.Storage.ReadUser(userID); err == nil && user.Role == core.RoleTeacher {
-			for _, a := range assignments {
-				if summary, err := h.Client.GetAssignmentSummary(ctx, a.ID); err == nil {
+			ids := make([]string, len(assignments))
+			for i, a := range assignments {
+				ids[i] = a.ID
+			}
+			if summaries, err := h.Client.GetAssignmentSummaries(ctx, ids); err == nil {
+				for assignmentID, summary := range summaries {
 					if summary.Status == "completed" && summary.AttentionRequired {
-						attentionMap[a.ID] = true
+						attentionMap[assignmentID] = true
 					}
 				}
 			}

@@ -134,6 +134,9 @@ func (c *Client) AddFeedback(ctx context.Context, assignmentId string, answer An
 	if err := c.storage.SaveAssignment(assignment); err != nil {
 		return Assignment{}, err
 	}
+	if err := c.storage.SaveAnswerVersion(assignmentId, answer); err != nil {
+		return Assignment{}, err
+	}
 
 	// Trigger async AI summary generation
 	c.triggerSummary(assignmentId)
@@ -332,18 +335,40 @@ func generateID() string {
 	return uuid.New().String()
 }
 
-// GetAssignmentSummary returns the latest AI summary for the assignment (teacher-only).
-func (c *Client) GetAssignmentSummary(ctx context.Context, assignmentID string) (AssignmentSummary, error) {
+// GetAssignmentSummaries returns the latest AI summaries for the given assignments (teacher-only).
+func (c *Client) GetAssignmentSummaries(ctx context.Context, assignmentIDs []string) (map[string]AssignmentSummary, error) {
 	_, err := c.requireRole(ctx, RoleTeacher)
 	if err != nil {
-		return AssignmentSummary{}, err
+		return nil, err
 	}
 
 	if c.summaryStorage == nil {
-		return AssignmentSummary{}, errors.New("AI features are disabled")
+		return nil, errors.New("AI features are disabled")
 	}
 
-	return c.summaryStorage.GetLatestSummary(assignmentID)
+	summaries, err := c.summaryStorage.GetLatestSummaries(assignmentIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]AssignmentSummary, len(summaries))
+	for _, s := range summaries {
+		result[s.AssignmentID] = s
+	}
+	return result, nil
+}
+
+// GetAssignmentSummary returns the latest AI summary for the assignment (teacher-only).
+func (c *Client) GetAssignmentSummary(ctx context.Context, assignmentID string) (AssignmentSummary, error) {
+	summaries, err := c.GetAssignmentSummaries(ctx, []string{assignmentID})
+	if err != nil {
+		return AssignmentSummary{}, err
+	}
+	s, ok := summaries[assignmentID]
+	if !ok {
+		return AssignmentSummary{}, errors.New("no summary found for assignment " + assignmentID)
+	}
+	return s, nil
 }
 
 // ListAssignmentSummaries returns all summary snapshots for an assignment (teacher-only).
