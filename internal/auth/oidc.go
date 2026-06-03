@@ -53,7 +53,7 @@ func NewOIDCHandler(clientID, clientSecret, redirectURL string, sessions *Sessio
 func (h *OIDCHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	state, err := generateState()
 	if err != nil {
-		http.Error(w, "Internal error", http.StatusInternalServerError)
+		http.Error(w, "Error interno", http.StatusInternalServerError)
 		return
 	}
 
@@ -74,11 +74,11 @@ func (h *OIDCHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *OIDCHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	stateCookie, err := r.Cookie("oauth_state")
 	if err != nil || stateCookie.Value == "" {
-		http.Error(w, "Missing state", http.StatusBadRequest)
+		http.Error(w, "Falta el estado de autorización", http.StatusBadRequest)
 		return
 	}
 	if r.URL.Query().Get("state") != stateCookie.Value {
-		http.Error(w, "Invalid state", http.StatusBadRequest)
+		http.Error(w, "El estado de autorización no es válido", http.StatusBadRequest)
 		return
 	}
 
@@ -92,35 +92,35 @@ func (h *OIDCHandler) HandleCallback(w http.ResponseWriter, r *http.Request) {
 
 	code := r.URL.Query().Get("code")
 	if code == "" {
-		http.Error(w, "Missing code", http.StatusBadRequest)
+		http.Error(w, "Falta el código de autorización", http.StatusBadRequest)
 		return
 	}
 
 	token, err := h.oauthConfig.Exchange(r.Context(), code)
 	if err != nil {
-		http.Error(w, "Token exchange failed", http.StatusUnauthorized)
+		http.Error(w, "No se pudo completar el inicio de sesión", http.StatusUnauthorized)
 		return
 	}
 
 	userInfo, err := fetchGoogleUserInfo(r.Context(), token.AccessToken)
 	if err != nil {
-		http.Error(w, "Failed to get user info", http.StatusInternalServerError)
+		http.Error(w, "No se pudo obtener la información del usuario", http.StatusInternalServerError)
 		return
 	}
 
 	user, err := h.storage.ReadUserByEmail(strings.ToLower(userInfo.Email))
 	if err != nil {
 		if strings.Contains(err.Error(), "not registered") {
-			http.Error(w, "Your account is not registered. Contact your teacher.", http.StatusForbidden)
+			http.Error(w, "Tu cuenta no está registrada. Contacta a tu profesor.", http.StatusForbidden)
 			return
 		}
-		http.Error(w, "Login failed", http.StatusInternalServerError)
+		http.Error(w, "No se pudo iniciar sesión", http.StatusInternalServerError)
 		return
 	}
 
 	identity, err := h.identities.LinkIfNecessary(user, *userInfo)
 	if err != nil {
-		http.Error(w, "Failed to link user", http.StatusInternalServerError)
+		http.Error(w, "No se pudo vincular el usuario", http.StatusInternalServerError)
 		return
 	}
 

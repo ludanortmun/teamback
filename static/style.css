@@ -7,13 +7,13 @@
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.6;
-    color: #333;
+    color: #111827;
     background: #f9fafb;
 }
 
 nav {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     padding: 1rem 2rem;
     background: #fff;
     border-bottom: 1px solid #e5e7eb;
@@ -22,16 +22,27 @@ nav {
 nav .brand {
     font-size: 1.25rem;
     font-weight: 700;
-    color: #111;
+    color: #111827;
     text-decoration: none;
 }
 
-span.flex-fill{
+span.flex-fill {
     flex: auto;
 }
 
 nav .nav-links {
+    display: flex;
+    gap: 1rem;
     margin-left: 1rem;
+}
+
+nav a {
+    color: #374151;
+    text-decoration: none;
+}
+
+.nav-links a:hover {
+    color: #2563eb;
 }
 
 nav .auth-links span {
@@ -48,13 +59,47 @@ h1 {
     margin-bottom: 1rem;
 }
 
+.eyebrow {
+    color: #2563eb;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+}
+
+.panel {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    padding: 1.25rem;
+}
+
+.hero-panel {
+    display: grid;
+    gap: 1rem;
+}
+
+.hero-panel h1,
+.hero-panel p {
+    margin-bottom: 0;
+}
+
+.hero-panel .btn {
+    justify-self: start;
+}
+
 .btn {
     display: inline-block;
     padding: 0.6rem 1.2rem;
     background: #2563eb;
     color: #fff;
     text-decoration: none;
-    border-radius: 6px;
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    font: inherit;
     font-weight: 500;
     transition: background 0.2s;
 }
@@ -81,6 +126,19 @@ h1 {
     color: #6b7280;
 }
 
+.errors {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 16px;
+    color: #991b1b;
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.error + .error {
+    margin-top: 0.5rem;
+}
+
 section.content-header {
     display: flex;
     align-items: center;
@@ -100,9 +158,9 @@ section.content-header h1 {
 .assignment-card {
     background: #fff;
     border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    padding: 1rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    border-radius: 16px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .assignment-card__title {
@@ -133,7 +191,7 @@ table {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
 }
 
@@ -155,20 +213,228 @@ tbody tr:last-child td {
     border-bottom: 0;
 }
 
-.member-feedback-form {
-    padding: 2rem 0;
-    border-bottom: 1px solid #e5e7eb;
+.app-form {
+    display: grid;
+    gap: 1rem;
 }
 
-.member-feedback-form:last-of-type {
-    border-bottom: none;
-}
-
-.member-feedback-form .form-group {
+.form-group {
     display: flex;
     flex-direction: column;
+    gap: 0.4rem;
 }
 
-.member-feedback-form .form-control textarea {
+.form-group label {
+    color: #374151;
+    font-weight: 600;
+}
+
+.form-group textarea,
+.form-group input {
+    border: 1px solid #d1d5db;
+    border-radius: 14px;
+    color: #111827;
+    font: inherit;
+    padding: 0.8rem 0.95rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+}
+
+.form-group textarea {
+    min-height: 5rem;
     resize: vertical;
+}
+
+.form-group textarea:focus,
+.form-group input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    outline: none;
+}
+
+.app-form .btn {
+    justify-self: start;
+}
+
+.empty-state {
+    color: #6b7280;
+}
+
+.assignment-section + .assignment-section {
+    margin-top: 1rem;
+}
+
+.assignment-section h2 {
+    color: #111827;
+    font-size: 1.15rem;
+    margin-bottom: 1rem;
+}
+
+.team-list {
+    display: grid;
+    gap: 0.75rem;
+    list-style: none;
+}
+
+.team-list li {
+    align-items: baseline;
+    border-top: 1px solid #f3f4f6;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: space-between;
+    padding-top: 0.75rem;
+}
+
+.team-list li:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.team-list span {
+    color: #6b7280;
+}
+
+.feedback-entry {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 1rem;
+}
+
+.feedback-entry + .feedback-entry {
+    margin-top: 1rem;
+}
+
+.feedback-entry h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.feedback-header {
+    margin-bottom: 1rem;
+}
+
+.feedback-header h1 {
+    margin-bottom: 0;
+}
+
+.feedback-form {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    display: grid;
+    padding: 1.25rem;
+}
+
+.feedback-intro {
+    color: #4b5563;
+    padding-bottom: 1.25rem;
+}
+
+.feedback-intro p + p {
+    margin-top: 0.75rem;
+}
+
+.member-feedback-form {
+    border-top: 1px solid #e5e7eb;
+    padding: 1.25rem 0;
+}
+
+.member-feedback-form h2 {
+    color: #111827;
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+}
+
+.member-feedback-form .form-group + .form-group {
+    margin-top: 1rem;
+}
+
+.feedback-form .btn {
+    justify-self: end;
+    margin-top: 0.25rem;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+    }
+
+    body {
+        background: #0f172a;
+        color: #e5e7eb;
+    }
+
+    nav,
+    .panel,
+    .assignment-card,
+    .feedback-form {
+        background: #111827;
+        border-color: #334155;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+
+    nav {
+        border-bottom-color: #334155;
+    }
+
+    nav .brand,
+    h1,
+    .assignment-card__title,
+    thead th,
+    .assignment-section h2,
+    .member-feedback-form h2 {
+        color: #f9fafb;
+    }
+
+    nav a,
+    .assignment-card__meta,
+    tbody td,
+    .form-group label,
+    .feedback-intro {
+        color: #cbd5e1;
+    }
+
+    .login-container p,
+    .empty-state,
+    .team-list span {
+        color: #94a3b8;
+    }
+
+    .eyebrow,
+    .assignment-card__actions a,
+    .nav-links a:hover {
+        color: #60a5fa;
+    }
+
+    .assignment-card__actions a:hover {
+        color: #93c5fd;
+    }
+
+    table,
+    thead th,
+    tbody td,
+    .team-list li,
+    .feedback-entry,
+    .member-feedback-form {
+        border-color: #334155;
+    }
+
+    .form-group textarea,
+    .form-group input {
+        background: #0f172a;
+        border-color: #475569;
+        color: #f9fafb;
+    }
+
+    .form-group textarea:focus,
+    .form-group input:focus {
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+    }
+
+    .errors {
+        background: #450a0a;
+        border-color: #7f1d1d;
+        color: #fecaca;
+    }
 }

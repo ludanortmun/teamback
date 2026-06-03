@@ -2,7 +2,7 @@
 
 {{define "content"}}
 <section class="content-header">
-    <h1>Assignments</h1>
+    <h1>Actividades</h1>
     <span class="flex-fill"></span>
     {{if .IsTeacher}}
     <a href="/assignments/new" class="btn">Crear nueva</a>
@@ -10,29 +10,23 @@
 </section>
 
 {{if .Assignments}}
-<table>
-    <thead>
-        <tr>
-            <th>Título</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {{range .Assignments}}
-        <tr>
-            <td>{{.Title}}</td>
-            <td>
-                {{if $.IsStudent}}
-                <a href="/assignments/{{.ID}}/feedback">Ver respuestas</a>
-                {{else}}
-                <a href="/assignments/{{.ID}}">Enviar retroalimentación</a>
-                {{end}}
-            </td>
-        </tr>
-        {{end}}
-    </tbody>
-</table>
+<div class="assignment-grid">
+    {{range .Assignments}}
+    <article class="assignment-card">
+        <h2 class="assignment-card__title">{{.Title}}</h2>
+        <div class="assignment-card__actions">
+            {{if $.IsStudent}}
+            <a href="/assignments/{{.ID}}/feedback">Enviar retroalimentación</a>
+            {{else}}
+            <a href="/assignments/{{.ID}}">Ver respuestas</a>
+            {{end}}
+        </div>
+    </article>
+    {{end}}
+</div>
 {{else}}
-<p>No assignments yet.</p>
+<div class="panel empty-state">
+    <p>No hay actividades todavía.</p>
+</div>
 {{end}}
 {{end}}

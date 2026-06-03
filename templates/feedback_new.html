@@ -2,7 +2,10 @@
 
 {{define "content"}}
 {{with .Assignment}}
-<h1>Retroalimentación del equipo ({{.Title}})</h1>
+<section class="feedback-header">
+    <p class="eyebrow">Retroalimentación del equipo</p>
+    <h1>{{.Title}}</h1>
+</section>
 
 {{if $.Errors}}
 <div class="errors">
@@ -10,17 +13,20 @@
 </div>
 {{end}}
 
-<form method="POST" action="/assignments/{{.ID}}/feedback">
-    <p>
+<form class="feedback-form" method="POST" action="/assignments/{{.ID}}/feedback">
+    <div class="feedback-intro">
+        <p>
         Describe a continuación las contribuciones de cada miembro del equipo,
         incluyendo un porcentaje aproximado del trabajo realizado por cada uno.
-    </p>
-    <p>
-        <strong>Estas respuestas solo podrán ser vistas por ti y por tu profesor.</strong>
-    </p>
+        </p>
+        <p>
+            <strong>Estas respuestas solo podrán ser vistas por ti y por tu profesor.</strong>
+        </p>
+    </div>
 
     {{range .Team}}
     <div class="member-feedback-form">
+        <h2>{{.Name}}</h2>
         <div class="form-group">
             <label for="description_{{.ID}}">Describe las aportaciones realizadas por {{.Name}}</label>
             <textarea id="description_{{.ID}}" name="description_{{.ID}}" rows="2" required>{{if $.ExistingAnswer}}{{with index $.ExistingAnswer.MemberContributions .ID}}{{.Description}}{{end}}{{end}}</textarea>

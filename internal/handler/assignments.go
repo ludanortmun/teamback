@@ -17,10 +17,10 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 
 	var errs []string
 	if title == "" {
-		errs = append(errs, "Title is required")
+		errs = append(errs, "El título es obligatorio")
 	}
 	if teamEmails == "" {
-		errs = append(errs, "At least one team member email is required")
+		errs = append(errs, "Debes agregar al menos un correo del equipo")
 	}
 
 	var emails []string
@@ -30,11 +30,11 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 			trimmed := strings.TrimSpace(e)
 			if trimmed != "" {
 				if !emailRegex.MatchString(trimmed) {
-					errs = append(errs, "Invalid email: "+trimmed)
+					errs = append(errs, "Correo inválido: "+trimmed)
 					continue
 				}
 				if seenEmails[trimmed] {
-					errs = append(errs, "Duplicate email: "+trimmed)
+					errs = append(errs, "Correo duplicado: "+trimmed)
 					continue
 				}
 				seenEmails[trimmed] = true
@@ -42,7 +42,7 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 			}
 		}
 		if len(emails) == 0 {
-			errs = append(errs, "At least one valid team member email is required")
+			errs = append(errs, "Debes agregar al menos un correo válido del equipo")
 		}
 	}
 
@@ -61,7 +61,7 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 	for _, email := range emails {
 		user, err := h.Client.GetUserByEmail(ctx, email)
 		if err != nil {
-			errs = append(errs, "User not found: "+email)
+			errs = append(errs, "No se encontró el usuario: "+email)
 			continue
 		}
 		team = append(team, user)
@@ -79,7 +79,7 @@ func (h *Handler) HandleCreateAssignment(w http.ResponseWriter, r *http.Request)
 	_, err := h.Client.CreateAssignment(ctx, title, team)
 	if err != nil {
 		h.Render(w, "assignment_new.html", h.templateData(r, map[string]any{
-			"Errors":     []string{err.Error()},
+			"Errors":     []string{localizedError(err)},
 			"Title":      title,
 			"TeamEmails": teamEmails,
 		}))
@@ -105,7 +105,7 @@ func (h *Handler) HandleListAssignments(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Assignment ID is required", http.StatusBadRequest)
+		http.Error(w, "El ID de la actividad es obligatorio", http.StatusBadRequest)
 		return
 	}
 

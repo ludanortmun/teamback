@@ -10,41 +10,45 @@
 </section>
 
 {{with .Assignment}}
-<h2>Team</h2>
-<ul>
-    {{range .Team}}
-    <li>{{.Name}} ({{.Email}})</li>
-    {{end}}
-</ul>
+<section class="panel assignment-section">
+    <h2>Equipo</h2>
+    <ul class="team-list">
+        {{range .Team}}
+        <li>{{.Name}} <span>{{.Email}}</span></li>
+        {{end}}
+    </ul>
+</section>
 
-<h2>Feedback</h2>
-{{if .Feedback}}
-{{range .Feedback}}
-<div class="feedback-entry">
-    <h3>By: {{.Author.Name}}</h3>
-    <table>
-        <thead>
-            <tr>
-                <th>Member</th>
-                <th>Description</th>
-                <th>Weight</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range $id, $contrib := .MemberContributions}}
-            <tr>
-                <td>{{range $.Assignment.Team}}{{if eq .ID $id}}{{.Name}}{{end}}{{end}}</td>
-                <td>{{$contrib.Description}}</td>
-                <td>{{$contrib.Weight}}%</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-</div>
-{{end}}
-{{else}}
-<p>No feedback submitted yet.</p>
-{{end}}
+<section class="panel assignment-section">
+    <h2>Retroalimentación</h2>
+    {{if .Feedback}}
+    {{range .Feedback}}
+    <div class="feedback-entry">
+        <h3>Enviada por {{.Author.Name}}</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Integrante</th>
+                    <th>Descripción</th>
+                    <th>Porcentaje</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range $id, $contrib := .MemberContributions}}
+                <tr>
+                    <td>{{range $.Assignment.Team}}{{if eq .ID $id}}{{.Name}}{{end}}{{end}}</td>
+                    <td>{{$contrib.Description}}</td>
+                    <td>{{$contrib.Weight}}%</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{end}}
+    {{else}}
+    <p class="empty-state">No se ha enviado retroalimentación todavía.</p>
+    {{end}}
+</section>
 
 {{end}}
 {{end}}

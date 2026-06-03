@@ -36,7 +36,7 @@ func RequireRole(sessions *auth.SessionStore, storage core.Storage, role core.Ro
 			}
 			user, err := storage.ReadUser(userID)
 			if err != nil || user.Role != role {
-				http.Error(w, "Forbidden", http.StatusForbidden)
+				http.Error(w, "No tienes permisos para acceder a esta página", http.StatusForbidden)
 				return
 			}
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)

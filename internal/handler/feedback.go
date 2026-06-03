@@ -12,7 +12,7 @@ import (
 func (h *Handler) HandleNewFeedback(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Assignment ID is required", http.StatusBadRequest)
+		http.Error(w, "El ID de la actividad es obligatorio", http.StatusBadRequest)
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *Handler) HandleNewFeedback(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
-		http.Error(w, "Assignment ID is required", http.StatusBadRequest)
+		http.Error(w, "El ID de la actividad es obligatorio", http.StatusBadRequest)
 		return
 	}
 
@@ -62,25 +62,25 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 		weightStr := strings.TrimSpace(r.FormValue(weightKey))
 
 		if desc == "" {
-			errs = append(errs, fmt.Sprintf("Description for %s is required", member.Name))
+			errs = append(errs, fmt.Sprintf("La descripción de %s es obligatoria", member.Name))
 		}
 
 		if weightStr == "" {
-			errs = append(errs, fmt.Sprintf("Weight for %s is required", member.Name))
+			errs = append(errs, fmt.Sprintf("El porcentaje de %s es obligatorio", member.Name))
 			continue
 		}
 
 		weight, parseErr := strconv.Atoi(weightStr)
 		if parseErr != nil {
-			errs = append(errs, fmt.Sprintf("Weight for %s must be a number", member.Name))
+			errs = append(errs, fmt.Sprintf("El porcentaje de %s debe ser un número", member.Name))
 			continue
 		}
 		if weight < 0 {
-			errs = append(errs, fmt.Sprintf("Weight for %s cannot be negative", member.Name))
+			errs = append(errs, fmt.Sprintf("El porcentaje de %s no puede ser negativo", member.Name))
 			continue
 		}
 		if weight > 100 {
-			errs = append(errs, fmt.Sprintf("Weight for %s cannot exceed 100", member.Name))
+			errs = append(errs, fmt.Sprintf("El porcentaje de %s no puede ser mayor que 100", member.Name))
 			continue
 		}
 
@@ -104,7 +104,7 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 		h.Render(w, "feedback_new.html", h.templateData(r, map[string]any{
 			"Assignment":     assignment,
 			"ExistingAnswer": &answer,
-			"Errors":         []string{err.Error()},
+			"Errors":         []string{localizedError(err)},
 		}))
 		return
 	}

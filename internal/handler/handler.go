@@ -12,9 +12,9 @@ import (
 )
 
 type Handler struct {
-	Client   *core.Client
-	Sessions *auth.SessionStore
-	Storage  core.Storage
+	Client    *core.Client
+	Sessions  *auth.SessionStore
+	Storage   core.Storage
 	Templates map[string]*template.Template
 }
 
@@ -76,12 +76,12 @@ func (h *Handler) authCtx(r *http.Request) context.Context {
 func (h *Handler) Render(w http.ResponseWriter, tmpl string, data any) {
 	t, ok := h.Templates[tmpl]
 	if !ok {
-		http.Error(w, "Template not found", http.StatusInternalServerError)
+		http.Error(w, "No se encontró la plantilla", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := t.ExecuteTemplate(w, "layout", data); err != nil {
-		http.Error(w, "Template error", http.StatusInternalServerError)
+		http.Error(w, "Error al renderizar la plantilla", http.StatusInternalServerError)
 	}
 }
 

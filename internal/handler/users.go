@@ -20,12 +20,12 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 
 	var errs []string
 	if name == "" {
-		errs = append(errs, "Name is required")
+		errs = append(errs, "El nombre es obligatorio")
 	}
 	if email == "" {
-		errs = append(errs, "Email is required")
+		errs = append(errs, "El correo electrónico es obligatorio")
 	} else if !emailRegex.MatchString(email) {
-		errs = append(errs, "Email format is invalid")
+		errs = append(errs, "El formato del correo electrónico no es válido")
 	}
 
 	if len(errs) > 0 {
@@ -47,7 +47,7 @@ func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	_, err := h.Client.AddUser(ctx, user)
 	if err != nil {
 		h.Render(w, "user_new.html", h.templateData(r, map[string]any{
-			"Errors": []string{err.Error()},
+			"Errors": []string{localizedError(err)},
 			"Name":   name,
 			"Email":  email,
 		}))
