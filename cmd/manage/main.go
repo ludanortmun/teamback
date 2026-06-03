@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/google/uuid"
+	"github.com/ludanortmun/teamback/internal/ai"
 	"github.com/ludanortmun/teamback/internal/config"
 	"github.com/ludanortmun/teamback/internal/core"
 	"github.com/ludanortmun/teamback/internal/database"
@@ -45,6 +46,25 @@ func main() {
 						},
 					},
 					Action: runAddUser,
+				},
+			},
+		},
+		{
+			Name:    "summaries",
+			Aliases: []string{"s"},
+			Usage:   "Manage AI summaries",
+			Subcommands: []cli.Command{
+				{
+					Name:  "retrigger",
+					Usage: "re-trigger AI summary generation for an assignment",
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:     "assignment-id, a",
+							Usage:    "assignment ID to re-generate summary for",
+							Required: true,
+						},
+					},
+					Action: runRetriggerSummary,
 				},
 			},
 		},
@@ -95,4 +115,47 @@ func runAddUser(c *cli.Context) error {
 	}
 
 	return teambackDb.WriteUser(user)
+}
+
+func runRetriggerSummary(c *cli.Context) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("loading config: %w", err)
+	}
+
+	if !cfg.AIEnabled {
+		return fmt.Errorf("AI features are not enabled (set OPENAI_API_KEY)")
+	}
+
+	db, err := database.Open(cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("opening database: %w", err)
+	}
+	defer db.Close()
+
+	if err := database.Migrate(db, "migrations"); err != nil {
+		return fmt.Errorf("running migrations: %w", err)
+	}
+
+	teambackDb := database.NewTeambackDatabase(db)
+	summarizer := ai.NewOpenAIClient(cfg.OpenAIAPIKey, cfg.OpenAIBaseURL, cfg.OpenAIModel)
+
+	client := core.NewClient(teambackDb, core.WithSummarizer(summarizer, teambackDb, nil))
+
+	assignmentID := c.String("assignment-id")
+	log.Printf("Re-triggering AI summary for assignment %s...", assignmentID)
+
+	summary, err := client.TriggerSummarySync(assignmentID)
+	if err != nil {
+		return fmt.Errorf("triggering summary: %w", err)
+	}
+
+	if summary.Status == "completed" {
+		log.Printf("Summary completed successfully (attention_required=%v)", summary.AttentionRequired)
+		fmt.Println(summary.Summary)
+	} else {
+		log.Printf("Summary status: %s", summary.Status)
+	}
+
+	return nil
 }

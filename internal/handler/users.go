@@ -14,6 +14,36 @@ func (h *Handler) HandleNewUser(w http.ResponseWriter, r *http.Request) {
 	h.Render(w, "user_new.html", h.templateData(r, nil))
 }
 
+func (h *Handler) HandleListStudents(w http.ResponseWriter, r *http.Request) {
+	ctx := h.authCtx(r)
+	students, err := h.Client.ListStudents(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	h.Render(w, "students.html", h.templateData(r, map[string]any{
+		"Students": students,
+	}))
+}
+
+func (h *Handler) HandleDeleteStudent(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "ID es obligatorio", http.StatusBadRequest)
+		return
+	}
+
+	ctx := h.authCtx(r)
+	err := h.Client.DeleteUser(ctx, id)
+	if err != nil {
+		http.Error(w, localizedError(err), http.StatusBadRequest)
+		return
+	}
+
+	http.Redirect(w, r, "/students", http.StatusSeeOther)
+}
+
 func (h *Handler) HandleCreateUser(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimSpace(r.FormValue("name"))
 	email := strings.TrimSpace(r.FormValue("email"))

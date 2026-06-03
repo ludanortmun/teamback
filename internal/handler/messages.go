@@ -16,6 +16,8 @@ func localizedError(err error) string {
 		return "No tienes permisos para realizar esta acción."
 	case core.ErrUserNotFound:
 		return "No se encontró el usuario."
+	case "user not found or not a student":
+		return "No se encontró el estudiante o no es posible eliminarlo."
 	default:
 		return err.Error()
 	}

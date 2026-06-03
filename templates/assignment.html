@@ -7,6 +7,11 @@
     {{if .IsStudent}}
     <a href="/assignments/{{.Assignment.ID}}/feedback" class="btn">Enviar retroalimentación</a>
     {{end}}
+    {{if .IsTeacher}}
+    <form method="POST" action="/assignments/{{.Assignment.ID}}/delete" onsubmit="return confirm('¿Estás seguro de eliminar esta actividad? Se eliminarán todas las respuestas asociadas.')" style="margin-left: 0.5rem;">
+        <button type="submit" class="btn btn--danger">Eliminar</button>
+    </form>
+    {{end}}
 </section>
 
 {{if .IsTeacher}}

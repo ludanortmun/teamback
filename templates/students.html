@@ -1,0 +1,40 @@
+{{template "layout" .}}
+
+{{define "content"}}
+<section class="content-header">
+    <h1>Estudiantes</h1>
+    <span class="flex-fill"></span>
+    <a href="/users/new" class="btn">Agregar estudiante</a>
+</section>
+
+{{if .Students}}
+<div class="panel">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Students}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.Email}}</td>
+                <td>
+                    <form method="POST" action="/students/{{.ID}}/delete" onsubmit="return confirm('¿Estás seguro de eliminar a este estudiante?')">
+                        <button type="submit" class="btn btn--danger btn--small">Eliminar</button>
+                    </form>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="panel empty-state">
+    <p>No hay estudiantes registrados.</p>
+</div>
+{{end}}
+{{end}}

@@ -82,6 +82,38 @@ func (t *TeambackDatabase) ReadUserByEmail(email string) (core.User, error) {
 	return user, nil
 }
 
+func (t *TeambackDatabase) ListStudents() ([]core.User, error) {
+	rows, err := t.db.Query(`SELECT id, name, email, role FROM users WHERE role = 'student' ORDER BY name`)
+	if err != nil {
+		return nil, fmt.Errorf("listing students: %w", err)
+	}
+	defer rows.Close()
+
+	var users []core.User
+	for rows.Next() {
+		var u core.User
+		var roleStr string
+		if err := rows.Scan(&u.ID, &u.Name, &u.Email, &roleStr); err != nil {
+			return nil, fmt.Errorf("scanning student: %w", err)
+		}
+		u.Role = parseRole(roleStr)
+		users = append(users, u)
+	}
+	return users, rows.Err()
+}
+
+func (t *TeambackDatabase) DeleteUser(id string) error {
+	result, err := t.db.Exec(`DELETE FROM users WHERE id = $1 AND role = 'student'`, id)
+	if err != nil {
+		return fmt.Errorf("deleting user: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("user not found or not a student")
+	}
+	return nil
+}
+
 func (t *TeambackDatabase) SaveAssignment(assignment core.Assignment) error {
 	tx, err := t.db.Begin()
 	if err != nil {
@@ -116,6 +148,18 @@ func (t *TeambackDatabase) SaveAssignment(assignment core.Assignment) error {
 	}
 
 	return tx.Commit()
+}
+
+func (t *TeambackDatabase) DeleteAssignment(id string) error {
+	result, err := t.db.Exec(`DELETE FROM assignments WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("deleting assignment: %w", err)
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return fmt.Errorf("assignment not found")
+	}
+	return nil
 }
 
 func (t *TeambackDatabase) SaveAnswerVersion(assignmentID string, answer core.Answer) error {

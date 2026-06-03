@@ -130,9 +130,37 @@ func (s *feedbackHandlerStorage) ReadUserByEmail(email string) (core.User, error
 	return core.User{}, errors.New("user not found")
 }
 
+func (s *feedbackHandlerStorage) ListStudents() ([]core.User, error) {
+	var students []core.User
+	for _, user := range s.users {
+		if user.Role == core.RoleStudent {
+			students = append(students, user)
+		}
+	}
+	return students, nil
+}
+
+func (s *feedbackHandlerStorage) DeleteUser(id string) error {
+	for i, user := range s.users {
+		if user.ID == id && user.Role == core.RoleStudent {
+			s.users = append(s.users[:i], s.users[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("user not found or not a student")
+}
+
 func (s *feedbackHandlerStorage) SaveAssignment(assignment core.Assignment) error {
 	s.saveAssignmentCalls++
 	s.assignments[assignment.ID] = assignment
+	return nil
+}
+
+func (s *feedbackHandlerStorage) DeleteAssignment(id string) error {
+	if _, ok := s.assignments[id]; !ok {
+		return errors.New(core.ErrAssignmentNotFound)
+	}
+	delete(s.assignments, id)
 	return nil
 }
 

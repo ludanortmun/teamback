@@ -5,7 +5,10 @@ type Storage interface {
 	WriteUser(user User) error
 	ReadUser(id string) (User, error)
 	ReadUserByEmail(email string) (User, error)
+	ListStudents() ([]User, error)
+	DeleteUser(id string) error
 	SaveAssignment(assignment Assignment) error
+	DeleteAssignment(id string) error
 	GetAssignment(assignmentId string) (Assignment, error)
 	ListAssignments() ([]Assignment, error)
 	// ListFeedbackHistory returns all feedback versions for a given author on an assignment (newest first).

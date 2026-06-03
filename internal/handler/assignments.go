@@ -123,6 +123,23 @@ func (h *Handler) HandleListAssignments(w http.ResponseWriter, r *http.Request) 
 	}))
 }
 
+func (h *Handler) HandleDeleteAssignment(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		http.Error(w, "El ID de la actividad es obligatorio", http.StatusBadRequest)
+		return
+	}
+
+	ctx := h.authCtx(r)
+	err := h.Client.DeleteAssignment(ctx, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/assignments", http.StatusSeeOther)
+}
+
 func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	if id == "" {
