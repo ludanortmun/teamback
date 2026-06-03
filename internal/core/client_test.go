@@ -671,16 +671,17 @@ type fakeSummaryStorage struct {
 }
 
 func (f *fakeSummaryStorage) CreateSummary(assignmentID string) (AssignmentSummary, error) {
-	s := AssignmentSummary{ID: "sum-1", AssignmentID: assignmentID, Status: "pending"}
+	s := AssignmentSummary{ID: "sum-1", AssignmentID: assignmentID, Status: "pending", Attempts: 1}
 	f.summaries = append(f.summaries, s)
 	return s, nil
 }
 
-func (f *fakeSummaryStorage) CompleteSummary(id string, summary string) error {
+func (f *fakeSummaryStorage) CompleteSummary(id string, summary string, attentionRequired bool) error {
 	for i := range f.summaries {
 		if f.summaries[i].ID == id {
 			f.summaries[i].Status = "completed"
 			f.summaries[i].Summary = summary
+			f.summaries[i].AttentionRequired = attentionRequired
 		}
 	}
 	return nil
@@ -712,6 +713,26 @@ func (f *fakeSummaryStorage) ListSummaries(assignmentID string) ([]AssignmentSum
 		}
 	}
 	return result, nil
+}
+
+func (f *fakeSummaryStorage) GetRetryableSummaries(maxAttempts int) ([]AssignmentSummary, error) {
+	var result []AssignmentSummary
+	for _, s := range f.summaries {
+		if s.Status == "failed" && s.Attempts < maxAttempts {
+			result = append(result, s)
+		}
+	}
+	return result, nil
+}
+
+func (f *fakeSummaryStorage) ResetForRetry(id string) error {
+	for i := range f.summaries {
+		if f.summaries[i].ID == id {
+			f.summaries[i].Status = "pending"
+			f.summaries[i].Attempts++
+		}
+	}
+	return nil
 }
 
 type fakeStorage struct {

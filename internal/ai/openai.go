@@ -34,9 +34,15 @@ const systemPrompt = `Eres un asistente de análisis educativo. Tu tarea es anal
 Debes:
 1. Identificar contradicciones entre las respuestas de los diferentes estudiantes (por ejemplo, si un estudiante dice que otro contribuyó mucho pero otro dice lo contrario).
 2. Señalar distribuciones de carga de trabajo muy desiguales (si los porcentajes asignados por múltiples estudiantes sugieren que alguien trabajó significativamente más o menos).
-3. Para cada estudiante del equipo, generar un breve párrafo resumiendo sus contribuciones según todas las respuestas recibidas.
+3. Detectar quejas explícitas de cualquier estudiante sobre el desempeño o comportamiento de otro integrante del equipo.
+4. Para cada estudiante del equipo, generar un breve párrafo resumiendo sus contribuciones según todas las respuestas recibidas.
 
-Responde siempre en español. Sé conciso y directo. Usa los identificadores de estudiante proporcionados tal como aparecen.`
+Responde siempre en español. Sé conciso y directo. Usa los identificadores de estudiante proporcionados tal como aparecen.
+
+IMPORTANTE: Al final de tu respuesta, en una línea separada, incluye EXACTAMENTE el siguiente JSON indicando si esta actividad requiere atención inmediata del profesor (por contradicciones graves, quejas explícitas, o distribución muy desigual):
+{"atencion_requerida": true}
+o
+{"atencion_requerida": false}`
 
 type chatRequest struct {
 	Model    string        `json:"model"`
@@ -59,8 +65,12 @@ type chatResponse struct {
 	} `json:"error"`
 }
 
+type attentionFlag struct {
+	AtencionRequerida bool `json:"atencion_requerida"`
+}
+
 // Summarize generates a summary from assignment feedback, anonymizing student names.
-func (c *OpenAIClient) Summarize(assignment core.Assignment, feedback []core.Answer) (string, error) {
+func (c *OpenAIClient) Summarize(assignment core.Assignment, feedback []core.Answer) (core.SummaryResult, error) {
 	nameToAlias, aliasToName := buildAnonymizationMaps(assignment.Team)
 
 	userPrompt := buildUserPrompt(assignment, feedback, nameToAlias)
@@ -75,46 +85,75 @@ func (c *OpenAIClient) Summarize(assignment core.Assignment, feedback []core.Ans
 
 	body, err := json.Marshal(req)
 	if err != nil {
-		return "", fmt.Errorf("marshaling request: %w", err)
+		return core.SummaryResult{}, fmt.Errorf("marshaling request: %w", err)
 	}
 
 	httpReq, err := http.NewRequest("POST", c.baseURL+"/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("creating request: %w", err)
+		return core.SummaryResult{}, fmt.Errorf("creating request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 
 	resp, err := c.client.Do(httpReq)
 	if err != nil {
-		return "", fmt.Errorf("calling OpenAI API: %w", err)
+		return core.SummaryResult{}, fmt.Errorf("calling OpenAI API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("reading response: %w", err)
+		return core.SummaryResult{}, fmt.Errorf("reading response: %w", err)
 	}
 
 	var chatResp chatResponse
 	if err := json.Unmarshal(respBody, &chatResp); err != nil {
-		return "", fmt.Errorf("parsing response: %w", err)
+		return core.SummaryResult{}, fmt.Errorf("parsing response: %w", err)
 	}
 
 	if chatResp.Error != nil {
-		return "", fmt.Errorf("API error: %s", chatResp.Error.Message)
+		return core.SummaryResult{}, fmt.Errorf("API error: %s", chatResp.Error.Message)
 	}
 
 	if len(chatResp.Choices) == 0 {
-		return "", fmt.Errorf("no response choices returned")
+		return core.SummaryResult{}, fmt.Errorf("no response choices returned")
 	}
 
-	summary := chatResp.Choices[0].Message.Content
+	content := chatResp.Choices[0].Message.Content
+
+	// Parse attention flag and extract clean summary
+	summary, attention := parseAttentionFlag(content)
 
 	// Reverse-map aliases back to real names
 	summary = deAnonymize(summary, aliasToName)
 
-	return summary, nil
+	return core.SummaryResult{
+		Summary:           summary,
+		AttentionRequired: attention,
+	}, nil
+}
+
+// parseAttentionFlag extracts the JSON attention flag from the end of the response
+// and returns the clean summary text and the flag value.
+func parseAttentionFlag(content string) (summary string, attentionRequired bool) {
+	content = strings.TrimSpace(content)
+
+	// Try to find the last JSON object in the response
+	lastBrace := strings.LastIndex(content, "{")
+	if lastBrace == -1 {
+		return content, false
+	}
+
+	jsonPart := content[lastBrace:]
+	var flag attentionFlag
+	if err := json.Unmarshal([]byte(jsonPart), &flag); err == nil {
+		// Successfully parsed — remove the JSON from the summary
+		summary = strings.TrimSpace(content[:lastBrace])
+		return summary, flag.AtencionRequerida
+	}
+
+	// Could not parse JSON, return full content with no flag
+	return content, false
 }
 
 // buildAnonymizationMaps creates bidirectional mappings between real names and aliases.

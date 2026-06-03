@@ -15,13 +15,18 @@ type Storage interface {
 // SummaryStorage handles persistence for AI-generated assignment summaries.
 type SummaryStorage interface {
 	CreateSummary(assignmentID string) (AssignmentSummary, error)
-	CompleteSummary(id string, summary string) error
+	CompleteSummary(id string, summary string, attentionRequired bool) error
 	FailSummary(id string) error
 	GetLatestSummary(assignmentID string) (AssignmentSummary, error)
 	ListSummaries(assignmentID string) ([]AssignmentSummary, error)
+	// GetRetryableSummaries returns failed summaries with attempts < maxAttempts
+	// that have not been superseded by a newer summary for the same assignment.
+	GetRetryableSummaries(maxAttempts int) ([]AssignmentSummary, error)
+	// ResetForRetry increments attempts and sets status back to pending.
+	ResetForRetry(id string) error
 }
 
 // Summarizer generates AI summaries from assignment feedback.
 type Summarizer interface {
-	Summarize(assignment Assignment, feedback []Answer) (string, error)
+	Summarize(assignment Assignment, feedback []Answer) (SummaryResult, error)
 }

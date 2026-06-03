@@ -12,8 +12,11 @@
 {{if .Assignments}}
 <div class="assignment-grid">
     {{range .Assignments}}
-    <article class="assignment-card">
-        <h2 class="assignment-card__title">{{.Title}}</h2>
+    <article class="assignment-card{{if index $.AttentionMap .ID}} assignment-card--attention{{end}}">
+        <h2 class="assignment-card__title">
+            {{if index $.AttentionMap .ID}}<span class="attention-badge">⚠ Atención</span>{{end}}
+            {{.Title}}
+        </h2>
         <div class="assignment-card__actions">
             {{if $.IsStudent}}
             <a href="/assignments/{{.ID}}/feedback">Enviar retroalimentación</a>

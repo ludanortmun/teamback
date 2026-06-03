@@ -385,10 +385,10 @@ func (t *TeambackDatabase) CreateSummary(assignmentID string) (core.AssignmentSu
 	}, nil
 }
 
-func (t *TeambackDatabase) CompleteSummary(id string, summary string) error {
+func (t *TeambackDatabase) CompleteSummary(id string, summary string, attentionRequired bool) error {
 	_, err := t.db.Exec(
-		`UPDATE assignment_summaries SET summary = $1, status = 'completed', completed_at = NOW() WHERE id = $2`,
-		summary, id,
+		`UPDATE assignment_summaries SET summary = $1, status = 'completed', attention_required = $2, completed_at = NOW() WHERE id = $3`,
+		summary, attentionRequired, id,
 	)
 	if err != nil {
 		return fmt.Errorf("completing summary: %w", err)
@@ -410,11 +410,11 @@ func (t *TeambackDatabase) GetLatestSummary(assignmentID string) (core.Assignmen
 	var s core.AssignmentSummary
 	var completedAt sql.NullTime
 	err := t.db.QueryRow(
-		`SELECT id, assignment_id, summary, status, created_at, completed_at
+		`SELECT id, assignment_id, summary, status, attention_required, attempts, created_at, completed_at
 		 FROM assignment_summaries
 		 WHERE assignment_id = $1
 		 ORDER BY created_at DESC LIMIT 1`, assignmentID,
-	).Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.CreatedAt, &completedAt)
+	).Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.AttentionRequired, &s.Attempts, &s.CreatedAt, &completedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return core.AssignmentSummary{}, fmt.Errorf("no summary found for assignment %s", assignmentID)
@@ -429,7 +429,7 @@ func (t *TeambackDatabase) GetLatestSummary(assignmentID string) (core.Assignmen
 
 func (t *TeambackDatabase) ListSummaries(assignmentID string) ([]core.AssignmentSummary, error) {
 	rows, err := t.db.Query(
-		`SELECT id, assignment_id, summary, status, created_at, completed_at
+		`SELECT id, assignment_id, summary, status, attention_required, attempts, created_at, completed_at
 		 FROM assignment_summaries
 		 WHERE assignment_id = $1
 		 ORDER BY created_at DESC`, assignmentID,
@@ -443,7 +443,7 @@ func (t *TeambackDatabase) ListSummaries(assignmentID string) ([]core.Assignment
 	for rows.Next() {
 		var s core.AssignmentSummary
 		var completedAt sql.NullTime
-		if err := rows.Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.CreatedAt, &completedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.AttentionRequired, &s.Attempts, &s.CreatedAt, &completedAt); err != nil {
 			return nil, fmt.Errorf("scanning summary: %w", err)
 		}
 		if completedAt.Valid {
@@ -452,4 +452,45 @@ func (t *TeambackDatabase) ListSummaries(assignmentID string) ([]core.Assignment
 		summaries = append(summaries, s)
 	}
 	return summaries, rows.Err()
+}
+
+func (t *TeambackDatabase) GetRetryableSummaries(maxAttempts int) ([]core.AssignmentSummary, error) {
+	rows, err := t.db.Query(
+		`SELECT s.id, s.assignment_id, s.summary, s.status, s.attention_required, s.attempts, s.created_at, s.completed_at
+		 FROM assignment_summaries s
+		 WHERE s.status = 'failed'
+		   AND s.attempts < $1
+		   AND NOT EXISTS (
+		       SELECT 1 FROM assignment_summaries s2
+		       WHERE s2.assignment_id = s.assignment_id AND s2.created_at > s.created_at
+		   )`, maxAttempts,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("getting retryable summaries: %w", err)
+	}
+	defer rows.Close()
+
+	var summaries []core.AssignmentSummary
+	for rows.Next() {
+		var s core.AssignmentSummary
+		var completedAt sql.NullTime
+		if err := rows.Scan(&s.ID, &s.AssignmentID, &s.Summary, &s.Status, &s.AttentionRequired, &s.Attempts, &s.CreatedAt, &completedAt); err != nil {
+			return nil, fmt.Errorf("scanning retryable summary: %w", err)
+		}
+		if completedAt.Valid {
+			s.CompletedAt = &completedAt.Time
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, rows.Err()
+}
+
+func (t *TeambackDatabase) ResetForRetry(id string) error {
+	_, err := t.db.Exec(
+		`UPDATE assignment_summaries SET status = 'pending', attempts = attempts + 1, completed_at = NULL WHERE id = $1`, id,
+	)
+	if err != nil {
+		return fmt.Errorf("resetting summary for retry: %w", err)
+	}
+	return nil
 }

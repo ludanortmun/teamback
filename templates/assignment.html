@@ -11,8 +11,11 @@
 
 {{if .IsTeacher}}
 {{if .Summary}}
-<section class="panel assignment-section">
+<section class="panel assignment-section{{if and (eq .Summary.Status "completed") .Summary.AttentionRequired}} panel--attention{{end}}">
     <h2>Resumen IA</h2>
+    {{if and (eq .Summary.Status "completed") .Summary.AttentionRequired}}
+    <div class="attention-banner">⚠ Esta actividad requiere atención del profesor</div>
+    {{end}}
     {{if eq .Summary.Status "pending"}}
     <p class="empty-state">Resumen con IA en proceso...</p>
     {{else if eq .Summary.Status "completed"}}

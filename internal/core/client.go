@@ -154,24 +154,56 @@ func (c *Client) triggerSummary(assignmentID string) {
 	}
 
 	c.workerSubmit(func() {
-		assignment, err := c.storage.GetAssignment(assignmentID)
-		if err != nil {
-			log.Printf("ERROR: failed to load assignment %s for summary: %v", assignmentID, err)
-			_ = c.summaryStorage.FailSummary(summary.ID)
-			return
-		}
-
-		result, err := c.summarizer.Summarize(assignment, assignment.Feedback)
-		if err != nil {
-			log.Printf("ERROR: AI summary failed for assignment %s: %v", assignmentID, err)
-			_ = c.summaryStorage.FailSummary(summary.ID)
-			return
-		}
-
-		if err := c.summaryStorage.CompleteSummary(summary.ID, result); err != nil {
-			log.Printf("ERROR: failed to save summary for assignment %s: %v", assignmentID, err)
-		}
+		c.executeSummary(summary.ID, assignmentID)
 	})
+}
+
+// executeSummary runs the AI summarizer for a given summary record.
+func (c *Client) executeSummary(summaryID string, assignmentID string) {
+	assignment, err := c.storage.GetAssignment(assignmentID)
+	if err != nil {
+		log.Printf("ERROR: failed to load assignment %s for summary: %v", assignmentID, err)
+		_ = c.summaryStorage.FailSummary(summaryID)
+		return
+	}
+
+	result, err := c.summarizer.Summarize(assignment, assignment.Feedback)
+	if err != nil {
+		log.Printf("ERROR: AI summary failed for assignment %s: %v", assignmentID, err)
+		_ = c.summaryStorage.FailSummary(summaryID)
+		return
+	}
+
+	if err := c.summaryStorage.CompleteSummary(summaryID, result.Summary, result.AttentionRequired); err != nil {
+		log.Printf("ERROR: failed to save summary for assignment %s: %v", assignmentID, err)
+	}
+}
+
+// RetryFailedSummaries finds failed summaries eligible for retry and resubmits them.
+func (c *Client) RetryFailedSummaries(maxAttempts int) {
+	if c.summarizer == nil || c.summaryStorage == nil || c.workerSubmit == nil {
+		return
+	}
+
+	retryable, err := c.summaryStorage.GetRetryableSummaries(maxAttempts)
+	if err != nil {
+		log.Printf("ERROR: failed to get retryable summaries: %v", err)
+		return
+	}
+
+	for _, s := range retryable {
+		summaryID := s.ID
+		assignmentID := s.AssignmentID
+
+		if err := c.summaryStorage.ResetForRetry(summaryID); err != nil {
+			log.Printf("ERROR: failed to reset summary %s for retry: %v", summaryID, err)
+			continue
+		}
+
+		c.workerSubmit(func() {
+			c.executeSummary(summaryID, assignmentID)
+		})
+	}
 }
 
 // validateAnswer checks that the answer has valid contributions for the given team.

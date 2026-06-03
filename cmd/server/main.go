@@ -57,6 +57,14 @@ func run() error {
 
 	client := core.NewClient(teambackDb, clientOpts...)
 
+	// Start retry ticker if AI is enabled
+	var retryTicker *worker.RetryTicker
+	if cfg.AIEnabled {
+		retryTicker = worker.NewRetryTicker(cfg.AIRetryInterval, func() {
+			client.RetryFailedSummaries(3)
+		})
+	}
+
 	h, err := handler.New(client, sessions, teambackDb, "templates")
 	if err != nil {
 		return fmt.Errorf("initializing handlers: %w", err)
@@ -122,6 +130,11 @@ func run() error {
 
 	<-ctx.Done()
 	log.Println("Shutting down...")
+
+	// Stop retry ticker
+	if retryTicker != nil {
+		retryTicker.Stop()
+	}
 
 	// Drain worker pool before shutting down
 	if pool != nil {

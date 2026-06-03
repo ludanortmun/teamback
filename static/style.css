@@ -376,6 +376,41 @@ tbody tr:last-child td {
     margin-top: 0.25rem;
 }
 
+.assignment-card--attention {
+    border-left: 4px solid var(--red);
+}
+
+.attention-badge {
+    display: inline-block;
+    background: var(--red-surface);
+    color: var(--red);
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 8px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+.panel--attention {
+    border-left: 4px solid var(--red);
+}
+
+.attention-banner {
+    background: var(--red-surface);
+    border: 1px solid var(--red);
+    border-radius: 12px;
+    color: var(--red);
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+}
+
+.summary-text {
+    white-space: pre-wrap;
+    line-height: 1.7;
+}
+
 @media (prefers-color-scheme: dark) {
     :root {
         color-scheme: dark;

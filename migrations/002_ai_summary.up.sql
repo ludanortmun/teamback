@@ -10,6 +10,8 @@ CREATE TABLE assignment_summaries (
     assignment_id TEXT NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
     summary TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL CHECK (status IN ('pending', 'completed', 'failed')) DEFAULT 'pending',
+    attention_required BOOLEAN NOT NULL DEFAULT FALSE,
+    attempts INT NOT NULL DEFAULT 1,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     completed_at TIMESTAMPTZ
 );

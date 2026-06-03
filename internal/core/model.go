@@ -45,10 +45,18 @@ type Contribution struct {
 
 // AssignmentSummary represents an AI-generated summary for an assignment.
 type AssignmentSummary struct {
-	ID           string
-	AssignmentID string
-	Summary      string
-	Status       string // "pending", "completed", "failed"
-	CreatedAt    time.Time
-	CompletedAt  *time.Time
+	ID                string
+	AssignmentID      string
+	Summary           string
+	Status            string // "pending", "completed", "failed"
+	AttentionRequired bool
+	Attempts          int
+	CreatedAt         time.Time
+	CompletedAt       *time.Time
+}
+
+// SummaryResult is the output from the AI summarizer.
+type SummaryResult struct {
+	Summary           string
+	AttentionRequired bool
 }

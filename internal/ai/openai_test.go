@@ -50,6 +50,42 @@ func TestDeAnonymize(t *testing.T) {
 	}
 }
 
+func TestParseAttentionFlag_True(t *testing.T) {
+	input := "Este es el resumen del equipo.\n\n{\"atencion_requerida\": true}"
+	summary, attention := parseAttentionFlag(input)
+
+	if attention != true {
+		t.Error("expected attention_required to be true")
+	}
+	if summary != "Este es el resumen del equipo." {
+		t.Errorf("expected clean summary, got %q", summary)
+	}
+}
+
+func TestParseAttentionFlag_False(t *testing.T) {
+	input := "Todo bien con el equipo.\n{\"atencion_requerida\": false}"
+	summary, attention := parseAttentionFlag(input)
+
+	if attention != false {
+		t.Error("expected attention_required to be false")
+	}
+	if summary != "Todo bien con el equipo." {
+		t.Errorf("expected clean summary, got %q", summary)
+	}
+}
+
+func TestParseAttentionFlag_NoJSON(t *testing.T) {
+	input := "Un resumen sin JSON al final."
+	summary, attention := parseAttentionFlag(input)
+
+	if attention != false {
+		t.Error("expected attention_required to be false when no JSON present")
+	}
+	if summary != input {
+		t.Errorf("expected full content returned, got %q", summary)
+	}
+}
+
 func TestBuildUserPrompt_NoPII(t *testing.T) {
 	team := []core.User{
 		{ID: "id-1", Name: "Alice García", Email: "alice@school.edu"},

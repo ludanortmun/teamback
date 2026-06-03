@@ -98,8 +98,24 @@ func (h *Handler) HandleListAssignments(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	// Build attention flags map for teachers
+	attentionMap := make(map[string]bool)
+	userID := middleware.GetUserID(r.Context())
+	if userID != "" {
+		if user, err := h.Storage.ReadUser(userID); err == nil && user.Role == core.RoleTeacher {
+			for _, a := range assignments {
+				if summary, err := h.Client.GetAssignmentSummary(ctx, a.ID); err == nil {
+					if summary.Status == "completed" && summary.AttentionRequired {
+						attentionMap[a.ID] = true
+					}
+				}
+			}
+		}
+	}
+
 	h.Render(w, "assignments.html", h.templateData(r, map[string]any{
-		"Assignments": assignments,
+		"Assignments":  assignments,
+		"AttentionMap": attentionMap,
 	}))
 }
 
