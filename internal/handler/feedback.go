@@ -115,5 +115,5 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, fmt.Sprintf("/assignments/%s", id), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/assignments/%s?success=true", id), http.StatusSeeOther)
 }

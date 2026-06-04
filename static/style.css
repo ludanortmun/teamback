@@ -26,7 +26,8 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     line-height: 1.6;
     color: var(--text);
     background: var(--base);
@@ -258,7 +259,9 @@ tbody tr:last-child td {
     color: var(--text);
     font: inherit;
     padding: 0.8rem 0.95rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
     width: 100%;
 }
 
@@ -431,5 +434,27 @@ tbody tr:last-child td {
         --button-text: #303446;
         --shadow: rgba(0, 0, 0, 0.3);
         --focus-ring: rgba(140, 170, 238, 0.24);
+    }
+}
+
+.success-banner {
+    background: #dff0d8;
+    border: 1px solid #5cb85c;
+    border-radius: 12px;
+    color: #3d8b40;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

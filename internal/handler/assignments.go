@@ -141,6 +141,10 @@ func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
 		"Assignment": assignment,
 	}
 
+	if r.URL.Query().Get("success") == "true" {
+		data["SuccessMessage"] = "Retroalimentacion enviada exitosamente"
+	}
+
 	// Load AI summary for teachers
 	userID := middleware.GetUserID(r.Context())
 	if userID != "" {
