@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ludanortmun/teamback/internal/auth"
 	"github.com/ludanortmun/teamback/internal/core"
 	"github.com/ludanortmun/teamback/internal/middleware"
 )
@@ -28,7 +29,7 @@ func TestHandleCreateFeedbackRejectsDescriptionOverCharacterLimit(t *testing.T) 
 		"description_student-1": {strings.Repeat("a", feedbackDescriptionMaxChars+1)},
 		"weight_student-1":      {"100"},
 	}
-	req := newFeedbackPostRequest("assignment-1", student.ID, form)
+	req := newFeedbackPostRequest("assignment-1", student.ID, form, h.Sessions)
 	rec := httptest.NewRecorder()
 
 	h.HandleCreateFeedback(rec, req)
@@ -57,7 +58,7 @@ func TestHandleCreateFeedbackAcceptsDescriptionAtCharacterLimit(t *testing.T) {
 		"description_student-1": {strings.Repeat("á", feedbackDescriptionMaxChars)},
 		"weight_student-1":      {"100"},
 	}
-	req := newFeedbackPostRequest("assignment-1", student.ID, form)
+	req := newFeedbackPostRequest("assignment-1", student.ID, form, h.Sessions)
 	rec := httptest.NewRecorder()
 
 	h.HandleCreateFeedback(rec, req)
@@ -65,8 +66,61 @@ func TestHandleCreateFeedbackAcceptsDescriptionAtCharacterLimit(t *testing.T) {
 	if rec.Code != http.StatusSeeOther {
 		t.Fatalf("expected status 303, got %d", rec.Code)
 	}
+	if location := rec.Header().Get("Location"); location != "/assignments/assignment-1" {
+		t.Fatalf("expected redirect to assignment success page, got %q", location)
+	}
 	if store.saveAssignmentCalls != 1 || store.saveAnswerVersionCalls != 1 {
 		t.Fatal("expected feedback at character limit to be persisted")
+	}
+}
+
+func TestHandleViewAssignmentShowsFeedbackSuccessMessage(t *testing.T) {
+	student := core.User{ID: "student-1", Name: "Ana", Role: core.RoleStudent}
+	store := newFeedbackHandlerStorage([]core.User{student}, core.Assignment{
+		ID:    "assignment-1",
+		Title: "Assignment",
+		Team:  []core.User{student},
+	})
+	h := newAssignmentHandlerForTest(store)
+
+	flashReq := httptest.NewRequest(http.MethodGet, "/assignments/assignment-1", nil)
+	addSessionCookie(flashReq, h.Sessions, student.ID)
+	flashRec := httptest.NewRecorder()
+	if err := h.Sessions.SetFlash(flashRec, flashReq, "Tu retroalimentación se envió correctamente. Puedes revisarla abajo."); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/assignments/assignment-1", nil)
+	req.SetPathValue("id", "assignment-1")
+	for _, cookie := range flashRec.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+	ctx := context.WithValue(req.Context(), middleware.UserIDKey, student.ID)
+	rec := httptest.NewRecorder()
+
+	h.HandleViewAssignment(rec, req.WithContext(ctx))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "Tu retroalimentación se envió correctamente") {
+		t.Fatalf("expected success message, got body: %s", rec.Body.String())
+	}
+
+	secondReq := httptest.NewRequest(http.MethodGet, "/assignments/assignment-1", nil)
+	secondReq.SetPathValue("id", "assignment-1")
+	for _, cookie := range rec.Result().Cookies() {
+		secondReq.AddCookie(cookie)
+	}
+	secondRec := httptest.NewRecorder()
+
+	h.HandleViewAssignment(secondRec, secondReq.WithContext(ctx))
+
+	if secondRec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", secondRec.Code)
+	}
+	if strings.Contains(secondRec.Body.String(), "Tu retroalimentación se envió correctamente") {
+		t.Fatalf("expected success message to be cleared, got body: %s", secondRec.Body.String())
 	}
 }
 
@@ -74,17 +128,41 @@ func newFeedbackHandlerForTest(store *feedbackHandlerStorage) *Handler {
 	tmpl := template.Must(template.New("layout").Parse(`{{define "layout"}}{{range .Errors}}{{.}}{{end}}{{end}}`))
 	return &Handler{
 		Client:    core.NewClient(store),
+		Sessions:  newTestSessionStore(),
 		Storage:   store,
 		Templates: map[string]*template.Template{"feedback_new.html": tmpl},
 	}
 }
 
-func newFeedbackPostRequest(assignmentID string, studentID string, form url.Values) *http.Request {
+func newAssignmentHandlerForTest(store *feedbackHandlerStorage) *Handler {
+	tmpl := template.Must(template.New("layout").Parse(`{{define "layout"}}{{range .Successes}}{{.}}{{end}}{{end}}`))
+	return &Handler{
+		Client:    core.NewClient(store),
+		Sessions:  newTestSessionStore(),
+		Storage:   store,
+		Templates: map[string]*template.Template{"assignment.html": tmpl},
+	}
+}
+
+func newFeedbackPostRequest(assignmentID string, studentID string, form url.Values, sessions *auth.SessionStore) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, "/assignments/"+assignmentID+"/feedback", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.SetPathValue("id", assignmentID)
+	addSessionCookie(req, sessions, studentID)
 	ctx := context.WithValue(req.Context(), middleware.UserIDKey, studentID)
 	return req.WithContext(ctx)
+}
+
+func newTestSessionStore() *auth.SessionStore {
+	return auth.NewSessionStore("0123456789abcdef0123456789abcdef")
+}
+
+func addSessionCookie(req *http.Request, sessions *auth.SessionStore, userID string) {
+	rec := httptest.NewRecorder()
+	sessions.Set(rec, userID)
+	for _, cookie := range rec.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
 }
 
 type feedbackHandlerStorage struct {

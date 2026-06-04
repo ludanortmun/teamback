@@ -14,6 +14,12 @@
     {{end}}
 </section>
 
+{{if .Successes}}
+<div class="successes">
+    {{range .Successes}}<p class="success">{{.}}</p>{{end}}
+</div>
+{{end}}
+
 {{if .IsTeacher}}
 {{if .Summary}}
 <section class="panel assignment-section{{if and (eq .Summary.Status "completed") .Summary.AttentionRequired}} panel--attention{{end}}">

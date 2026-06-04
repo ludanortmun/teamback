@@ -20,6 +20,8 @@
     --blue-hover: #209fb5;
     --red: #d20f39;
     --red-surface: #f5e0dc;
+    --green: #40a02b;
+    --green-surface: #e6f4d7;
     --button-text: #eff1f5;
     --shadow: rgba(76, 79, 105, 0.12);
     --focus-ring: rgba(30, 102, 245, 0.2);
@@ -171,6 +173,19 @@ h1 {
 }
 
 .error + .error {
+    margin-top: 0.5rem;
+}
+
+.successes {
+    background: var(--green-surface);
+    border: 1px solid var(--green);
+    border-radius: 16px;
+    color: var(--green);
+    margin-bottom: 1rem;
+    padding: 1rem 1.25rem;
+}
+
+.success + .success {
     margin-top: 0.5rem;
 }
 
@@ -480,6 +495,8 @@ tbody tr:last-child td {
         --blue-hover: #85c1dc;
         --red: #e78284;
         --red-surface: #414559;
+        --green: #a6d189;
+        --green-surface: #414559;
         --button-text: #303446;
         --shadow: rgba(0, 0, 0, 0.3);
         --focus-ring: rgba(140, 170, 238, 0.24);

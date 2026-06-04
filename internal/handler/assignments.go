@@ -157,6 +157,12 @@ func (h *Handler) HandleViewAssignment(w http.ResponseWriter, r *http.Request) {
 	data := map[string]any{
 		"Assignment": assignment,
 	}
+	if message, ok, err := h.Sessions.PopFlash(w, r); err != nil {
+		http.Error(w, "Ocurrió un error", http.StatusInternalServerError)
+		return
+	} else if ok {
+		data["Successes"] = []string{message}
+	}
 
 	// Load AI summary for teachers
 	userID := middleware.GetUserID(r.Context())
