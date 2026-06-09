@@ -142,6 +142,31 @@ func TestClient_CreateAssignment_Success(t *testing.T) {
 	}
 }
 
+func TestClient_DeleteAssignment_Unauthorized(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, nonTeacher)
+
+	err := client.DeleteAssignment(callerCtx(nonTeacher), "assignment-1")
+	if err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected error with message", ErrUnauthorizedMsg)
+	}
+}
+
+func TestClient_DeleteAssignment_Success(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1)
+	stg.assignments["assignment-1"] = Assignment{ID: "assignment-1", Title: "Some assignment", Team: []User{student1}}
+
+	if err := client.DeleteAssignment(callerCtx(teacher), "assignment-1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := stg.assignments["assignment-1"]; ok {
+		t.Fatal("expected assignment to be deleted")
+	}
+}
+
 func TestClient_AddFeedback_AssignmentNotFound(t *testing.T) {
 	stg := newFakeStorage()
 	client := NewClient(stg)
@@ -617,6 +642,48 @@ func TestClient_GetUserByEmail_Success(t *testing.T) {
 	}
 }
 
+func TestClient_ListStudents_TeacherOnly(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student2, student1)
+
+	students, err := client.ListStudents(callerCtx(teacher))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(students) != 2 {
+		t.Fatalf("expected 2 students, got %d", len(students))
+	}
+	if students[0].Role != RoleStudent || students[1].Role != RoleStudent {
+		t.Fatal("expected only students to be returned")
+	}
+
+	_, err = client.ListStudents(callerCtx(student1))
+	if err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected unauthorized error for student")
+	}
+}
+
+func TestClient_DeleteUser_TeacherOnly(t *testing.T) {
+	stg := newFakeStorage()
+	client := NewClient(stg)
+	stg.users = append(stg.users, teacher, student1, student2)
+
+	if err := client.DeleteUser(callerCtx(teacher), student1.ID); err != nil {
+		t.Fatal(err)
+	}
+	if len(stg.users) != 2 {
+		t.Fatalf("expected 2 users after delete, got %d", len(stg.users))
+	}
+	if slices.ContainsFunc(stg.users, func(u User) bool { return u.ID == student1.ID }) {
+		t.Fatal("expected deleted student to be removed")
+	}
+
+	if err := client.DeleteUser(callerCtx(student2), teacher.ID); err == nil || err.Error() != ErrUnauthorizedMsg {
+		t.Fatal("expected unauthorized error for student")
+	}
+}
+
 func TestClient_GetAssignmentSummary_StudentUnauthorized(t *testing.T) {
 	stg := newFakeStorage()
 	ss := &fakeSummaryStorage{}
@@ -626,6 +693,45 @@ func TestClient_GetAssignmentSummary_StudentUnauthorized(t *testing.T) {
 	_, err := client.GetAssignmentSummary(callerCtx(student1), "assignment-1")
 	if err == nil || err.Error() != ErrUnauthorizedMsg {
 		t.Fatal("expected unauthorized error for student")
+	}
+}
+
+func TestClient_TriggerSummarySync_Disabled(t *testing.T) {
+	client := NewClient(newFakeStorage())
+
+	_, err := client.TriggerSummarySync("assignment-1")
+	if err == nil || err.Error() != "AI features are disabled" {
+		t.Fatal("expected AI disabled error")
+	}
+}
+
+func TestClient_TriggerSummarySync_Success(t *testing.T) {
+	stg := newFakeStorage()
+	ss := &fakeSummaryStorage{}
+	client := NewClient(stg, WithSummarizer(fakeSummarizer{}, ss, nil))
+
+	assignment := Assignment{
+		ID:    "assignment-1",
+		Title: "Assignment 1",
+		Team:  []User{student1, student2},
+		Feedback: []Answer{
+			{Author: student1},
+		},
+	}
+	stg.assignments[assignment.ID] = assignment
+
+	summary, err := client.TriggerSummarySync(assignment.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.Status != "completed" {
+		t.Fatalf("expected completed summary, got %s", summary.Status)
+	}
+	if summary.Summary != "generated summary" {
+		t.Fatalf("expected generated summary, got %q", summary.Summary)
+	}
+	if !summary.AttentionRequired {
+		t.Fatal("expected attention required to be true")
 	}
 }
 
@@ -664,6 +770,12 @@ func TestClient_ListFeedbackHistory_TeacherSuccess(t *testing.T) {
 	if len(history) != 1 {
 		t.Fatalf("expected 1 history entry, got %d", len(history))
 	}
+}
+
+type fakeSummarizer struct{}
+
+func (fakeSummarizer) Summarize(assignment Assignment, feedback []Answer) (SummaryResult, error) {
+	return SummaryResult{Summary: "generated summary", AttentionRequired: true}, nil
 }
 
 type fakeSummaryStorage struct {
@@ -783,8 +895,36 @@ func (f *fakeStorage) ReadUserByEmail(email string) (User, error) {
 	return User{}, errors.New("user not found")
 }
 
+func (f *fakeStorage) ListStudents() ([]User, error) {
+	var students []User
+	for _, user := range f.users {
+		if user.Role == RoleStudent {
+			students = append(students, user)
+		}
+	}
+	return students, nil
+}
+
+func (f *fakeStorage) DeleteUser(id string) error {
+	for i, user := range f.users {
+		if user.ID == id && user.Role == RoleStudent {
+			f.users = append(f.users[:i], f.users[i+1:]...)
+			return nil
+		}
+	}
+	return errors.New("user not found or not a student")
+}
+
 func (f *fakeStorage) SaveAssignment(assignment Assignment) error {
 	f.assignments[assignment.ID] = assignment
+	return nil
+}
+
+func (f *fakeStorage) DeleteAssignment(id string) error {
+	if _, ok := f.assignments[id]; !ok {
+		return errors.New(ErrAssignmentNotFound)
+	}
+	delete(f.assignments, id)
 	return nil
 }
 

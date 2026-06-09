@@ -115,5 +115,10 @@ func (h *Handler) HandleCreateFeedback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := h.Sessions.SetFlash(w, r, "Tu respuesta se envió correctamente."); err != nil {
+		http.Error(w, "No se pudo guardar el mensaje de confirmación", http.StatusInternalServerError)
+		return
+	}
+
 	http.Redirect(w, r, fmt.Sprintf("/assignments/%s", id), http.StatusSeeOther)
 }

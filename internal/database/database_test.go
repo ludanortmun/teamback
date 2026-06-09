@@ -197,6 +197,51 @@ func TestSaveAndGetAssignment(t *testing.T) {
 	}
 }
 
+func TestDeleteAssignment(t *testing.T) {
+	tdb := setupTestDB(t)
+
+	alice := core.User{ID: "user-1", Name: "Alice", Email: "alice@test.com", Role: core.RoleStudent}
+	bob := core.User{ID: "user-2", Name: "Bob", Email: "bob@test.com", Role: core.RoleStudent}
+	if err := tdb.WriteUser(alice); err != nil {
+		t.Fatalf("WriteUser alice: %v", err)
+	}
+	if err := tdb.WriteUser(bob); err != nil {
+		t.Fatalf("WriteUser bob: %v", err)
+	}
+
+	assignment := core.Assignment{ID: "assign-1", Title: "Sprint 1", Team: []core.User{alice, bob}}
+	if err := tdb.SaveAssignment(assignment); err != nil {
+		t.Fatalf("SaveAssignment: %v", err)
+	}
+
+	answer := core.Answer{
+		Author: alice,
+		MemberContributions: map[string]core.Contribution{
+			"user-1": {Description: "Did frontend", Weight: 50},
+			"user-2": {Description: "Did backend", Weight: 50},
+		},
+	}
+	if err := tdb.SaveAnswerVersion("assign-1", answer); err != nil {
+		t.Fatalf("SaveAnswerVersion: %v", err)
+	}
+
+	if err := tdb.DeleteAssignment("assign-1"); err != nil {
+		t.Fatalf("DeleteAssignment: %v", err)
+	}
+
+	if _, err := tdb.GetAssignment("assign-1"); err == nil {
+		t.Fatal("expected deleted assignment to be missing")
+	}
+
+	history, err := tdb.ListFeedbackHistory("assign-1", "user-1")
+	if err != nil {
+		t.Fatalf("ListFeedbackHistory after delete: %v", err)
+	}
+	if len(history) != 0 {
+		t.Fatalf("expected feedback history to be deleted, got %d entries", len(history))
+	}
+}
+
 func TestSaveAnswerVersion(t *testing.T) {
 	tdb := setupTestDB(t)
 

@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"slices"
 
@@ -80,6 +81,24 @@ func (c *Client) AddUser(ctx context.Context, user User) (User, error) {
 	return user, nil
 }
 
+// ListStudents returns all student users. Teacher-only.
+func (c *Client) ListStudents(ctx context.Context) ([]User, error) {
+	_, err := c.requireRole(ctx, RoleTeacher)
+	if err != nil {
+		return nil, err
+	}
+	return c.storage.ListStudents()
+}
+
+// DeleteUser deletes a student user. Teacher-only.
+func (c *Client) DeleteUser(ctx context.Context, id string) error {
+	_, err := c.requireRole(ctx, RoleTeacher)
+	if err != nil {
+		return err
+	}
+	return c.storage.DeleteUser(id)
+}
+
 // CreateAssignment initializes a new team assignment and persists it.
 // Only teachers can create assignments.
 func (c *Client) CreateAssignment(ctx context.Context, title string, team []User) (Assignment, error) {
@@ -100,6 +119,15 @@ func (c *Client) CreateAssignment(ctx context.Context, title string, team []User
 	}
 
 	return assignment, nil
+}
+
+// DeleteAssignment deletes an assignment and all related data. Teacher-only.
+func (c *Client) DeleteAssignment(ctx context.Context, id string) error {
+	_, err := c.requireRole(ctx, RoleTeacher)
+	if err != nil {
+		return err
+	}
+	return c.storage.DeleteAssignment(id)
 }
 
 // AddFeedback adds the provided feedback to the specified assignment.
@@ -159,6 +187,27 @@ func (c *Client) triggerSummary(assignmentID string) {
 	c.workerSubmit(func() {
 		c.executeSummary(summary.ID, assignmentID)
 	})
+}
+
+// TriggerSummarySync creates a new summary record and executes the AI summarization synchronously.
+// Returns the completed summary or an error.
+func (c *Client) TriggerSummarySync(assignmentID string) (AssignmentSummary, error) {
+	if c.summarizer == nil || c.summaryStorage == nil {
+		return AssignmentSummary{}, errors.New("AI features are disabled")
+	}
+
+	summary, err := c.summaryStorage.CreateSummary(assignmentID)
+	if err != nil {
+		return AssignmentSummary{}, fmt.Errorf("creating summary record: %w", err)
+	}
+
+	c.executeSummary(summary.ID, assignmentID)
+
+	latest, err := c.summaryStorage.GetLatestSummary(assignmentID)
+	if err != nil {
+		return AssignmentSummary{}, fmt.Errorf("fetching completed summary: %w", err)
+	}
+	return latest, nil
 }
 
 // executeSummary runs the AI summarizer for a given summary record.

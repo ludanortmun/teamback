@@ -16,6 +16,7 @@
         <h2 class="assignment-card__title">
             {{if index $.AttentionMap .ID}}<span class="attention-badge">⚠ Atención</span>{{end}}
             {{.Title}}
+            {{if $.IsTeacher}}<span class="progress-badge">{{len .Feedback}}/{{len .Team}}</span>{{end}}
         </h2>
         <div class="assignment-card__actions">
             {{if $.IsStudent}}
