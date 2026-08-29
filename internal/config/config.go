@@ -17,6 +17,7 @@ type Config struct {
 	GoogleClientSecret string
 	GoogleRedirectURL  string
 	SessionSecret      string
+	StaticDir          string
 
 	// AI configuration
 	OpenAIAPIKey     string
@@ -54,6 +55,7 @@ func Load() (*Config, error) {
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:  getEnv("GOOGLE_REDIRECT_URL", "http://localhost:8080/auth/callback"),
 		SessionSecret:      os.Getenv("SESSION_SECRET"),
+		StaticDir:          getEnv("STATIC_DIR", "static"),
 
 		OpenAIAPIKey:     apiKey,
 		OpenAIBaseURL:    getEnv("OPENAI_BASE_URL", "https://api.openai.com/v1"),
@@ -71,6 +73,10 @@ func Load() (*Config, error) {
 	}
 	if cfg.SessionSecret == "" {
 		return nil, fmt.Errorf("SESSION_SECRET is required")
+	}
+
+	if info, err := os.Stat(cfg.StaticDir); err != nil || !info.IsDir() {
+		return nil, fmt.Errorf("STATIC_DIR %q is not a valid directory", cfg.StaticDir)
 	}
 
 	return cfg, nil

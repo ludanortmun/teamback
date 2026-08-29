@@ -82,7 +82,7 @@ func run() error {
 	mux := http.NewServeMux()
 
 	// Static files
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.StaticDir))))
 
 	// Public routes
 	mux.HandleFunc("GET /{$}", h.HandleHome)

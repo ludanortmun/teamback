@@ -69,6 +69,16 @@ A simple web application for gathering feedback on group school projects. Teache
 
    The server starts at `http://localhost:8080` by default. Migrations run automatically on startup.
 
+4. **(Optional) Configure the static assets directory:**
+
+   By default, the server serves static assets from the `static` directory relative to the working directory. To run a standalone binary from a different location (e.g., without Docker), set the `STATIC_DIR` environment variable to point to the directory containing the static assets:
+
+   ```sh
+   STATIC_DIR=/path/to/static ./teamback
+   ```
+
+   If `STATIC_DIR` is not set, it defaults to `static`. If the configured path does not exist or is not a directory, the server fails to start.
+
 ## Commands
 
 | Command | Description |
